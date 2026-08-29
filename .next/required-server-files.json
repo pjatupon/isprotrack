@@ -6,7 +6,7 @@
     "typescript": {
       "ignoreBuildErrors": false
     },
-    "typedRoutes": true,
+    "typedRoutes": false,
     "distDir": ".next",
     "cleanDistDir": true,
     "assetPrefix": "",

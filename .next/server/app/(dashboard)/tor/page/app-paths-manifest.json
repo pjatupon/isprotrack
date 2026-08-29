@@ -1,0 +1,3 @@
+{
+  "/(dashboard)/tor/page": "app/(dashboard)/tor/page.js"
+}

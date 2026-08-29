@@ -4,7 +4,7 @@ import { Button, Chip, Tooltip } from "@heroui/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { FiBookOpen, FiChevronLeft, FiClipboard, FiFileText, FiLogOut, FiMenu, FiMessageCircle, FiPenTool, FiShield, FiX } from "react-icons/fi";
+import { FiBookOpen, FiClipboard, FiFileText, FiLogOut, FiMenu, FiMessageCircle, FiPenTool, FiShield, FiX } from "react-icons/fi";
 import { authClient } from "@/lib/auth-client";
 
 type Role = "REQUESTER" | "STAFF" | "APPROVER" | "ADMIN";
@@ -19,14 +19,14 @@ type DashboardShellProps = {
   };
 };
 
-const menuItems = [
-  { href: "/dashboard", label: "AI Consult", description: "ปรึกษาความต้องการ", icon: FiMessageCircle },
-  { href: "/dashboard/quotations", label: "Quotation Inspector", description: "ตรวจใบเสนอราคา", icon: FiFileText },
-  { href: "/dashboard/tor", label: "TOR Generator", description: "ช่วยร่าง TOR", icon: FiPenTool },
-  { href: "/dashboard/tracking", label: "Request Tracking", description: "ติดตามสถานะคำขอ", icon: FiClipboard },
+const menuItems: { href: string; label: string; description: string; icon: typeof FiMessageCircle; roles?: Role[] }[] = [
+  { href: "/consult", label: "AI Consult", description: "ปรึกษาความต้องการ", icon: FiMessageCircle },
+  { href: "/quotation", label: "Quotation Inspector", description: "ตรวจใบเสนอราคา", icon: FiFileText },
+  { href: "/tor", label: "TOR Generator", description: "ช่วยร่าง TOR", icon: FiPenTool },
+  { href: "/requests", label: "Request Tracking", description: "ติดตามสถานะคำขอ", icon: FiClipboard },
   { href: "/staff/regulations", label: "Regulation Hub", description: "จัดการระเบียบพัสดุ", icon: FiBookOpen, roles: ["STAFF", "ADMIN"] },
   { href: "/admin/audit-log", label: "Audit Log", description: "ประวัติการดำเนินการ", icon: FiShield, roles: ["ADMIN"] },
-] as const;
+];
 
 const roleLabel: Record<Role, string> = {
   REQUESTER: "ผู้ขอจัดซื้อ",

@@ -6,7 +6,7 @@ self.__SERVER_FILES_MANIFEST={
     "typescript": {
       "ignoreBuildErrors": false
     },
-    "typedRoutes": true,
+    "typedRoutes": false,
     "distDir": ".next",
     "cleanDistDir": true,
     "assetPrefix": "",

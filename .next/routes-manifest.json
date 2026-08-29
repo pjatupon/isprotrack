@@ -51,10 +51,58 @@
       "namedRegex": "^/_not\\-found(?:/)?$"
     },
     {
+      "page": "/api/ai/consult",
+      "regex": "^/api/ai/consult(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/ai/consult(?:/)?$"
+    },
+    {
+      "page": "/api/ai/ocr",
+      "regex": "^/api/ai/ocr(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/api/ai/ocr(?:/)?$"
+    },
+    {
+      "page": "/consult",
+      "regex": "^/consult(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/consult(?:/)?$"
+    },
+    {
+      "page": "/dashboard",
+      "regex": "^/dashboard(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/dashboard(?:/)?$"
+    },
+    {
       "page": "/login",
       "regex": "^/login(?:/)?$",
       "routeKeys": {},
       "namedRegex": "^/login(?:/)?$"
+    },
+    {
+      "page": "/quotation",
+      "regex": "^/quotation(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/quotation(?:/)?$"
+    },
+    {
+      "page": "/requests",
+      "regex": "^/requests(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/requests(?:/)?$"
+    },
+    {
+      "page": "/staff/regulations",
+      "regex": "^/staff/regulations(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/staff/regulations(?:/)?$"
+    },
+    {
+      "page": "/tor",
+      "regex": "^/tor(?:/)?$",
+      "routeKeys": {},
+      "namedRegex": "^/tor(?:/)?$"
     }
   ],
   "dataRoutes": [],
