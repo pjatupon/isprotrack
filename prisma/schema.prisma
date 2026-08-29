@@ -1,0 +1,192 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  REQUESTER
+  STAFF
+  APPROVER
+  ADMIN
+}
+
+enum RegulationStatus {
+  DRAFT
+  ACTIVE
+  SUPERSEDED
+  ARCHIVED
+}
+
+enum ProcurementStatus {
+  DRAFT
+  SUBMITTED
+  IN_REVIEW
+  NEEDS_REVISION
+  APPROVED
+  REJECTED
+  COMPLETED
+  CANCELLED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  emailVerified Boolean   @default(false)
+  image         String?   @db.Text
+  role          UserRole  @default(REQUESTER)
+  department    String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  accounts      Account[]
+  sessions      Session[]
+  requests      ProcurementRequest[]
+  reviewedChunks RegulationChunk[] @relation("ChunkReviewer")
+  auditLogs     AuditLog[]
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  userId                String
+  accountId             String
+  issuer                String
+  providerId            String
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?   @db.Text
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([issuer, accountId])
+  @@index([userId])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?  @db.Text
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Verification {
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([identifier, value])
+}
+
+model RegulationDocument {
+  id            String             @id @default(cuid())
+  title         String
+  issueNo       String?
+  effectiveFrom DateTime?
+  effectiveTo   DateTime?
+  status        RegulationStatus   @default(DRAFT)
+  fileUrl       String?            @db.Text
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  chunks        RegulationChunk[]
+}
+
+model RegulationChunk {
+  id         String              @id @default(cuid())
+  documentId String
+  content    String              @db.LongText
+  embedding  String?             @db.LongText
+  section    String?
+  page       Int?
+  checksum   String
+  reviewedBy String?
+  reviewedAt DateTime?
+  document   RegulationDocument  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  reviewer   User?               @relation("ChunkReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+
+  @@unique([documentId, checksum])
+  @@index([reviewedBy])
+}
+
+model ProcurementRequest {
+  id               String   @id @default(cuid())
+  title            String
+  objective        String   @db.Text
+  budget           Decimal  @db.Decimal(15, 2)
+  budgetSource     String?
+  procurementType  String
+  procurementMethod String
+  status           ProcurementStatus @default(DRAFT)
+  requesterId      String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  requester        User     @relation(fields: [requesterId], references: [id])
+  intakes          DocumentIntake[]
+  torDrafts        TorDraft[]
+
+  @@index([requesterId, status])
+}
+
+model DocumentIntake {
+  id               String   @id @default(cuid())
+  requestId        String
+  vendorName       String
+  taxId            String?
+  totalAmount      Decimal  @db.Decimal(15, 2)
+  vatAmount        Decimal? @db.Decimal(15, 2)
+  priceValidityDays Int?
+  rawOcrJson       Json?
+  isVerified       Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  request          ProcurementRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@index([requestId])
+}
+
+model TorDraft {
+  id               String   @id @default(cuid())
+  requestId        String
+  objective        String   @db.Text
+  scope            String   @db.LongText
+  specifications   String   @db.LongText
+  deliverables     String   @db.LongText
+  inspectionCriteria String @db.LongText
+  version          Int      @default(1)
+  isLockInRisk     Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  request          ProcurementRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  @@unique([requestId, version])
+}
+
+model AuditLog {
+  id              String   @id @default(cuid())
+  userId          String?
+  action           String
+  prompt           String?  @db.LongText
+  retrievedSources Json?
+  modelName       String?
+  output          String?  @db.LongText
+  timestamp       DateTime @default(now())
+  user             User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, timestamp])
+}

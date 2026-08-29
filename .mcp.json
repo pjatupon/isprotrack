@@ -1,0 +1,31 @@
+{
+  "mcpServers": {
+    "nextjs-docs": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-fetch"
+      ],
+      "env": {
+        "DEFAULT_DOCS_URL": "https://nextjs.org/docs"
+      }
+    },
+    "heroui-v3-docs": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-fetch"
+      ],
+      "env": {
+        "DEFAULT_DOCS_URL": "https://heroui.com/docs"
+      }
+    },
+    "prisma-mariadb": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-mariadb"
+      ]
+    }
+  }
+}
