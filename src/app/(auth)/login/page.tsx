@@ -1,6 +1,7 @@
 "use client";
 
 import { Button, Card, Input, Label, TextField } from "@heroui/react";
+import Image from "next/image";
 import { useState, useTransition } from "react";
 import { FiArrowRight, FiBriefcase } from "react-icons/fi";
 import { authClient } from "@/lib/auth-client";
@@ -68,21 +69,27 @@ export default function LoginPage() {
         <section className="relative overflow-hidden bg-[#e87722] p-8 text-[#272522] sm:p-12">
           <div className="absolute -right-16 -top-20 h-56 w-56 rounded-full border-[28px] border-[#f6ba75]/70" />
           <div className="absolute -bottom-24 -left-20 h-56 w-56 rounded-full border-[34px] border-[#b84f12]" />
-          <div className="relative flex h-full min-h-64 flex-col justify-between">
-            <div className="flex items-center gap-3 font-bold tracking-wide">
-              <span className="grid h-11 w-11 place-items-center rounded-2xl bg-[#272522] text-lg text-[#f6a45b]">IS</span>
-              <span>PROTRACK</span>
+            <div className="relative flex h-full min-h-64 flex-col justify-between">
+              <div className="inline-flex w-fit items-center rounded-2xl border border-white/40 bg-white/95 px-5 py-3 shadow-lg shadow-orange-950/10">
+                <Image
+                  priority
+                  src="/Logo-ISKKU-transparent.png"
+                  alt="โลโก้คณะสหวิทยาการ มหาวิทยาลัยขอนแก่น"
+                  width={240}
+                  height={58}
+                  className="h-auto w-44 sm:w-56"
+                />
+              </div>
+              <div className="mt-16">
+                <p className="mb-4 text-sm font-bold tracking-[0.2em] text-[#71320c]">KHON KAEN UNIVERSITY</p>
+                <h1 className="max-w-sm text-3xl font-bold leading-tight sm:text-4xl">ทุกคำขอจัดซื้อ เดินหน้าอย่างโปร่งใส</h1>
+                <p className="mt-5 max-w-sm leading-7 text-[#56270b]">ระบบติดตามและบริหารการจัดซื้อจัดจ้างอัจฉริยะ คณะสหวิทยาการ มหาวิทยาลัยขอนแก่น</p>
+              </div>
+              <div className="mt-12 flex items-center gap-3 text-sm font-medium text-[#65300f]">
+                <FiBriefcase aria-hidden="true" />
+                Procurement workspace for SIS, KKU
+              </div>
             </div>
-            <div className="mt-16">
-              <p className="mb-4 text-sm font-bold tracking-[0.2em] text-[#71320c]">KHON KAEN UNIVERSITY</p>
-              <h1 className="max-w-sm text-3xl font-bold leading-tight sm:text-4xl">ทุกคำขอจัดซื้อ เดินหน้าอย่างโปร่งใส</h1>
-              <p className="mt-5 max-w-sm leading-7 text-[#56270b]">ระบบติดตามและบริหารการจัดซื้อจัดจ้างอัจฉริยะ คณะสหวิทยาการ มหาวิทยาลัยขอนแก่น</p>
-            </div>
-            <div className="mt-12 flex items-center gap-3 text-sm font-medium text-[#65300f]">
-              <FiBriefcase aria-hidden="true" />
-              Procurement workspace for SIS, KKU
-            </div>
-          </div>
         </section>
 
         <section className="p-6 sm:p-10 lg:p-12">

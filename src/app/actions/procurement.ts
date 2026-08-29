@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { generateEmbedding } from "@/lib/ai/rag";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
-import type { RegulationStatus, ProcurementStatus } from "@prisma/client";
+import type { RegulationStatus, ProcurementStatus } from "@/generated/prisma/enums";
 
 async function requireSession() {
   const session = await auth.api.getSession({ headers: await headers() });

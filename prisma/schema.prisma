@@ -1,10 +1,10 @@
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
 }
 
 datasource db {
   provider = "mysql"
-  url      = env("DATABASE_URL")
 }
 
 enum UserRole {
@@ -16,7 +16,9 @@ enum UserRole {
 
 enum RegulationStatus {
   DRAFT
+  PROCESSING
   ACTIVE
+  FAILED
   SUPERSEDED
   ARCHIVED
 }
@@ -30,6 +32,13 @@ enum ProcurementStatus {
   REJECTED
   COMPLETED
   CANCELLED
+}
+
+enum KnowledgeDocumentType {
+  REGULATION
+  EXAMPLE
+  WORKFLOW
+  OTHER
 }
 
 model User {
@@ -105,11 +114,43 @@ model RegulationDocument {
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
   chunks        RegulationChunk[]
+
+  // Knowledge base ingestion metadata
+  categoryId    String?
+  documentType  KnowledgeDocumentType @default(REGULATION)
+  originalName  String?
+  storedName    String?
+  filePath      String?
+  mimeType      String?
+  fileSize      Int?
+  checksum      String?
+  extractedText String?            @db.LongText
+  embeddingModel String?
+  dimensions    Int?
+  processingNote String?           @db.Text
+  category      KnowledgeCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([categoryId, status])
+  @@index([documentType, status])
+  @@index([checksum])
+}
+
+model KnowledgeCategory {
+  id          String               @id @default(cuid())
+  name        String               @unique
+  description String?
+  isActive    Boolean              @default(true)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  documents   RegulationDocument[]
+
+  @@index([isActive, name])
 }
 
 model RegulationChunk {
   id         String              @id @default(cuid())
   documentId String
+  chunkIndex Int?
   content    String              @db.LongText
   embedding  String?             @db.LongText
   section    String?

@@ -4,7 +4,7 @@ import { useState, useActionState, useTransition } from "react";
 import { Button, Card, TextField, Label, Input, Table, Chip, Alert } from "@heroui/react";
 import { FiBookOpen, FiPlus, FiCheck, FiLayers, FiFileText, FiRefreshCw } from "react-icons/fi";
 import { createRegulationDocument, toggleRegulationStatus } from "@/app/actions/procurement";
-import type { RegulationStatus } from "@prisma/client";
+import type { RegulationStatus } from "@/generated/prisma/enums";
 
 type RegDoc = {
   id: string;

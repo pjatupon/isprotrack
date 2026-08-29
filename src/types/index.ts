@@ -1,1 +1,1 @@
-export type { UserRole, ProcurementStatus, RegulationStatus } from "@prisma/client";
+export type { UserRole, ProcurementStatus, RegulationStatus } from "@/generated/prisma/enums";
