@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 
 export default async function KnowledgeBasePage() {
   const access = await getKnowledgeAccess();
-  if (!access) redirect("/dashboard");
+  if (!access) redirect("/");
 
   const [categories, documents] = await Promise.all([
     prisma.knowledgeCategory.findMany({
@@ -16,7 +16,20 @@ export default async function KnowledgeBasePage() {
     }),
     prisma.regulationDocument.findMany({
       orderBy: { createdAt: "desc" },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        issueNo: true,
+        status: true,
+        documentType: true,
+        originalName: true,
+        fileSize: true,
+        mimeType: true,
+        fileUrl: true,
+        dimensions: true,
+        processingNote: true,
+        createdAt: true,
+        updatedAt: true,
         category: { select: { id: true, name: true } },
         _count: { select: { chunks: true } },
       },
@@ -41,6 +54,7 @@ export default async function KnowledgeBasePage() {
         originalName: doc.originalName,
         fileSize: doc.fileSize,
         mimeType: doc.mimeType,
+        fileUrl: doc.fileUrl,
         dimensions: doc.dimensions,
         chunkCount: doc._count.chunks,
         processingNote: doc.processingNote,

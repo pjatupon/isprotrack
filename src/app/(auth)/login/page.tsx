@@ -3,17 +3,26 @@
 import { Button, Card, Input, Label, TextField } from "@heroui/react";
 import Image from "next/image";
 import { useState, useTransition } from "react";
-import { FiArrowRight, FiBriefcase } from "react-icons/fi";
+import { useRouter } from "next/navigation";
+import { FiArrowRight, FiBriefcase, FiUser, FiShield, FiCheck, FiSend } from "react-icons/fi";
 import { authClient } from "@/lib/auth-client";
 
 type Mode = "login" | "register";
 
+const DEMO_USERS = [
+  { email: "admin@kku.ac.th", role: "ADMIN", label: "ผู้ดูแลระบบ", icon: FiShield, color: "bg-red-50 text-red-700 hover:bg-red-100 border-red-200" },
+  { email: "staff@kku.ac.th", role: "STAFF", label: "เจ้าหน้าที่พัสดุ", icon: FiUser, color: "bg-blue-50 text-blue-700 hover:bg-blue-100 border-blue-200" },
+  { email: "approver@kku.ac.th", role: "APPROVER", label: "ผู้อนุมัติ", icon: FiCheck, color: "bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-200" },
+  { email: "requester@kku.ac.th", role: "REQUESTER", label: "ผู้ร้องขอ", icon: FiSend, color: "bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200" },
+];
+
 function getCallbackURL() {
   const callbackURL = new URLSearchParams(window.location.search).get("callbackURL");
-  return callbackURL?.startsWith("/") ? callbackURL : "/dashboard";
+  return callbackURL?.startsWith("/") ? callbackURL : "/";
 }
 
 export default function LoginPage() {
+  const router = useRouter();
   const [mode, setMode] = useState<Mode>("login");
   const [error, setError] = useState<string>();
   const [isPending, startTransition] = useTransition();
@@ -45,20 +54,38 @@ export default function LoginPage() {
 
       if (result.error) {
         setError(result.error.message ?? "ไม่สามารถดำเนินการได้ โปรดลองอีกครั้ง");
+        return;
+      }
+
+      if (mode === "register") return;
+
+      const role = result.data?.user?.role;
+      if (role === "ADMIN" || role === "STAFF" || role === "APPROVER") {
+        router.push("/admin/");
+      } else {
+        router.push("/");
       }
     });
   }
 
-  function signInWithGoogle() {
+  function demoLogin(email: string) {
     setError(undefined);
     startTransition(async () => {
-      const result = await authClient.signIn.social({
-        provider: "google",
-        callbackURL: getCallbackURL(),
+      const result = await authClient.signIn.email({
+        email,
+        password: "Ismart123!",
       });
 
       if (result.error) {
-        setError(result.error.message ?? "ไม่สามารถเชื่อมต่อ Google ได้");
+        setError(result.error.message ?? "ไม่สามารถเข้าสู่ระบบได้");
+        return;
+      }
+
+      const role = result.data?.user?.role;
+      if (role === "ADMIN" || role === "STAFF" || role === "APPROVER") {
+        router.push("/admin/");
+      } else {
+        router.push("/");
       }
     });
   }
@@ -154,12 +181,25 @@ export default function LoginPage() {
                 </Button>
               </form>
 
-              <div className="my-6 flex items-center gap-3 text-xs text-stone-500 before:h-px before:flex-1 before:bg-stone-200 after:h-px after:flex-1 after:bg-stone-200">หรือ</div>
+              <div className="my-6 flex items-center gap-3 text-xs text-stone-500 before:h-px before:flex-1 before:bg-stone-200 after:h-px after:flex-1 after:bg-stone-200">เข้าสู่ระบบ Demo</div>
 
-              <Button className="border border-stone-300 bg-white font-semibold text-[#272522] hover:bg-stone-50" fullWidth isDisabled={isPending} onPress={signInWithGoogle} type="button" variant="secondary">
-                <span className="text-base font-bold text-[#4285f4]">G</span>
-                ดำเนินการต่อด้วย Google @kku.ac.th
-              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                {DEMO_USERS.map((user) => {
+                  const Icon = user.icon;
+                  return (
+                    <button
+                      key={user.email}
+                      type="button"
+                      disabled={isPending}
+                      onClick={() => demoLogin(user.email)}
+                      className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs font-semibold transition disabled:opacity-50 ${user.color}`}
+                    >
+                      <Icon className="h-4 w-4" />
+                      <span>{user.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </Card.Content>
           </Card>
         </section>

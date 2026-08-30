@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1210" viewBox="0 0 1600 1210" font-family="'Sarabun','Helvetica Neue',Arial,sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#c85f13"/>
+    </marker>
+    <marker id="arrowDk" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6b6760"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1600" height="1210" fill="#f5f4f1"/>
+
+  <!-- Title -->
+  <text x="800" y="52" text-anchor="middle" font-size="30" font-weight="bold" fill="#292724">สถาปัตยกรรมระบบ IS ProTrack — ระบบติดตามการจัดซื้อจัดจ้างด้วย AI (RAG)</text>
+  <text x="800" y="84" text-anchor="middle" font-size="17" fill="#6b6760">คณะสหวิทยาการ มหาวิทยาลัยขอนแก่น | Gemini 2.5 Flash Lite (LLM + Vision) • Local Hash Embedding 768 มิติ • MariaDB/Prisma</text>
+
+  <!-- ================= LAYER 1 : USERS ================= -->
+  <text x="40" y="112" font-size="14" font-weight="bold" fill="#c85f13">1. ผู้ใช้งาน (Users)</text>
+  <g>
+    <rect x="40" y="120" width="350" height="70" rx="12" fill="#ffffff" stroke="#e87722" stroke-width="2"/>
+    <text x="215" y="147" text-anchor="middle" font-size="20" font-weight="bold" fill="#292724">ผู้ขอจัดซื้อ</text>
+    <text x="215" y="170" text-anchor="middle" font-size="13" fill="#6b6760">ปรึกษา / ส่งคำขอ / ติดตาม</text>
+
+    <rect x="430" y="120" width="350" height="70" rx="12" fill="#ffffff" stroke="#e87722" stroke-width="2"/>
+    <text x="605" y="147" text-anchor="middle" font-size="20" font-weight="bold" fill="#292724">เจ้าหน้าที่พัสดุ</text>
+    <text x="605" y="170" text-anchor="middle" font-size="13" fill="#6b6760">ตรวจสอบ / อนุมัติแบบฟอร์ม</text>
+
+    <rect x="820" y="120" width="350" height="70" rx="12" fill="#ffffff" stroke="#e87722" stroke-width="2"/>
+    <text x="995" y="147" text-anchor="middle" font-size="20" font-weight="bold" fill="#292724">ผู้อนุมัติ</text>
+    <text x="995" y="170" text-anchor="middle" font-size="13" fill="#6b6760">พิจารณาอนุมัติจัดซื้อ</text>
+
+    <rect x="1210" y="120" width="350" height="70" rx="12" fill="#ffffff" stroke="#e87722" stroke-width="2"/>
+    <text x="1385" y="147" text-anchor="middle" font-size="20" font-weight="bold" fill="#292724">ผู้ดูแลระบบ</text>
+    <text x="1385" y="170" text-anchor="middle" font-size="13" fill="#6b6760">จัดการคลังความรู้ / ตั้งค่า AI</text>
+  </g>
+
+  <!-- arrow 1 -->
+  <line x1="800" y1="194" x2="800" y2="238" stroke="#c85f13" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="820" y="222" font-size="13" fill="#6b6760">เข้าสู่ระบบ (Better Auth) + ตรวจสิทธิ์ RBAC</text>
+
+  <!-- ================= LAYER 2 : FRONTEND ================= -->
+  <text x="40" y="258" font-size="14" font-weight="bold" fill="#c85f13">2. Frontend — Next.js 16 (App Router) + React 19 + TypeScript + HeroUI v3</text>
+  <rect x="40" y="266" width="1520" height="126" rx="14" fill="#ffffff" stroke="#d8d0c8" stroke-width="1.5"/>
+  <g>
+    <rect x="64" y="302" width="232" height="46" rx="23" fill="#fdeee2" stroke="#e87722" stroke-width="1.5"/>
+    <text x="180" y="330" text-anchor="middle" font-size="15" font-weight="bold" fill="#a64610">แดชบอร์ดติดตาม</text>
+
+    <rect x="312" y="302" width="232" height="46" rx="23" fill="#fdeee2" stroke="#e87722" stroke-width="1.5"/>
+    <text x="428" y="330" text-anchor="middle" font-size="15" font-weight="bold" fill="#a64610">ที่ปรึกษา AI (Chat)</text>
+
+    <rect x="560" y="302" width="232" height="46" rx="23" fill="#fdeee2" stroke="#e87722" stroke-width="1.5"/>
+    <text x="676" y="330" text-anchor="middle" font-size="15" font-weight="bold" fill="#a64610">ตรวจใบเสนอราคา</text>
+
+    <rect x="808" y="302" width="232" height="46" rx="23" fill="#fdeee2" stroke="#e87722" stroke-width="1.5"/>
+    <text x="924" y="330" text-anchor="middle" font-size="15" font-weight="bold" fill="#a64610">ร่าง / ตรวจ TOR</text>
+
+    <rect x="1056" y="302" width="232" height="46" rx="23" fill="#fdeee2" stroke="#e87722" stroke-width="1.5"/>
+    <text x="1172" y="330" text-anchor="middle" font-size="15" font-weight="bold" fill="#a64610">แบบฟอร์มราชการ</text>
+
+    <rect x="1304" y="302" width="232" height="46" rx="23" fill="#fdeee2" stroke="#e87722" stroke-width="1.5"/>
+    <text x="1420" y="330" text-anchor="middle" font-size="15" font-weight="bold" fill="#a64610">หน้าแอดมิน</text>
+  </g>
+
+  <!-- arrow 2 -->
+  <line x1="800" y1="396" x2="800" y2="438" stroke="#c85f13" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="820" y="424" font-size="13" fill="#6b6760">เรียกใช้งานผ่าน Server Actions (ตรวจสอบสิทธิ์ทุกครั้ง)</text>
+
+  <!-- ================= LAYER 3 : AI MODULES ================= -->
+  <text x="40" y="458" font-size="14" font-weight="bold" fill="#c85f13">3. โมดูล AI ธุรกิจ (Business Logic — Server Components / Server Actions)</text>
+  <rect x="40" y="466" width="1520" height="236" rx="14" fill="#ffffff" stroke="#d8d0c8" stroke-width="1.5"/>
+  <g>
+    <rect x="64" y="498" width="272" height="168" rx="12" fill="#fffaf5" stroke="#e0a06a" stroke-width="1.5"/>
+    <text x="200" y="524" text-anchor="middle" font-size="16" font-weight="bold" fill="#a64610">ที่ปรึกษาการจัดซื้อ</text>
+    <text x="80" y="550" font-size="13" fill="#4a4640">• แชต RAG อ้างอิงระเบียบ + citation</text>
+    <text x="80" y="572" font-size="13" fill="#4a4640">• รับรูปภาพพัสดุ (Vision)</text>
+    <text x="80" y="594" font-size="13" fill="#4a4640">• ประเมิน SLA / วิธีจัดหา / roadmap</text>
+    <text x="80" y="616" font-size="13" fill="#4a4640">• บันทึกแชต + ส่งต่อข้อมูลร่าง TOR</text>
+
+    <rect x="350" y="498" width="272" height="168" rx="12" fill="#fffaf5" stroke="#e0a06a" stroke-width="1.5"/>
+    <text x="486" y="524" text-anchor="middle" font-size="16" font-weight="bold" fill="#a64610">ตรวจใบเสนอราคา</text>
+    <text x="366" y="550" font-size="13" fill="#4a4640">• Vision OCR สกัดข้อมูลผู้ขาย/รายการ</text>
+    <text x="366" y="572" font-size="13" fill="#4a4640">• ตรวจความถูกต้องยอด/VAT</text>
+    <text x="366" y="594" font-size="13" fill="#4a4640">• ตรวจจับความเสี่ยงล็อกสเปก</text>
+    <text x="366" y="616" font-size="13" fill="#4a4640">• วิเคราะห์เทียบระเบียบ + workflow</text>
+
+    <rect x="636" y="498" width="272" height="168" rx="12" fill="#fffaf5" stroke="#e0a06a" stroke-width="1.5"/>
+    <text x="772" y="524" text-anchor="middle" font-size="16" font-weight="bold" fill="#a64610">ร่าง / ตรวจ TOR</text>
+    <text x="652" y="550" font-size="13" fill="#4a4640">• ร่าง TOR โครงสร้างมาตรฐาน (JSON)</text>
+    <text x="652" y="572" font-size="13" fill="#4a4640">• ตรวจล็อกสเปก / ถ้อยคำกำกวม</text>
+    <text x="652" y="594" font-size="13" fill="#4a4640">• ตรวจความครบถ้วนตามระเบียบ</text>
+    <text x="652" y="616" font-size="13" fill="#4a4640">• เก็บประวัติเวอร์ชัน + ส่งออก .docx</text>
+
+    <rect x="922" y="498" width="272" height="168" rx="12" fill="#fffaf5" stroke="#e0a06a" stroke-width="1.5"/>
+    <text x="1058" y="524" text-anchor="middle" font-size="16" font-weight="bold" fill="#a64610">แบบฟอร์มอัจฉริยะ</text>
+    <text x="938" y="550" font-size="13" fill="#4a4640">• AI วิเคราะห์ช่องกรอกใน .docx</text>
+    <text x="938" y="572" font-size="13" fill="#4a4640">• เลือกฟอร์มตามประเภท/วงเงิน</text>
+    <text x="938" y="594" font-size="13" fill="#4a4640">• เติมข้อมูลอัตโนมัติ</text>
+    <text x="938" y="616" font-size="13" fill="#4a4640">• ดาวน์โหลดไฟล์ Word ที่กรอกแล้ว</text>
+
+    <rect x="1208" y="498" width="272" height="168" rx="12" fill="#fffaf5" stroke="#e0a06a" stroke-width="1.5"/>
+    <text x="1344" y="524" text-anchor="middle" font-size="16" font-weight="bold" fill="#a64610">Prompt &amp; SLA</text>
+    <text x="1224" y="550" font-size="13" fill="#4a4640">• AI Prompt Engineer ปรับ Prompt</text>
+    <text x="1224" y="572" font-size="13" fill="#4a4640">• ตั้งค่าโมเดล/API ผ่านแอดมิน</text>
+    <text x="1224" y="594" font-size="13" fill="#4a4640">• Audit Log ทุกการตัดสินใจ AI</text>
+    <text x="1224" y="616" font-size="13" fill="#4a4640">• ผล AI = ฉบับร่าง ให้คนตรวจซ้ำ</text>
+  </g>
+
+  <!-- arrow 3 -->
+  <line x1="800" y1="706" x2="800" y2="748" stroke="#c85f13" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="820" y="734" font-size="13" fill="#6b6760">เรียก GenAI API (OpenAI-compatible)</text>
+
+  <!-- ================= LAYER 4 : AI CORE ================= -->
+  <text x="40" y="768" font-size="14" font-weight="bold" fill="#c85f13">4. AI Core — โมเดลประมวลผล</text>
+  <rect x="40" y="776" width="1520" height="116" rx="14" fill="#ffffff" stroke="#d8d0c8" stroke-width="1.5"/>
+  <g>
+    <rect x="64" y="802" width="720" height="72" rx="12" fill="#292724"/>
+    <text x="90" y="828" font-size="18" font-weight="bold" fill="#ffffff">Gemini 2.5 Flash Lite</text>
+    <text x="90" y="852" font-size="14" fill="#e8e4de">LLM + Vision — แชต / OCR / สกัด JSON / วิเคราะห์ ผ่านเกตเวย์ GenAI ม.ขอนแก่น</text>
+
+    <rect x="804" y="802" width="720" height="72" rx="12" fill="#292724"/>
+    <text x="830" y="828" font-size="18" font-weight="bold" fill="#ffffff">Local Hash Embedding (768 มิติ)</text>
+    <text x="830" y="852" font-size="14" fill="#e8e4de">ค้นความหมายแบบ offline + cosine similarity (รองรับสลับเป็น text-embedding-004)</text>
+  </g>
+
+  <!-- arrow 4 -->
+  <line x1="800" y1="896" x2="800" y2="938" stroke="#c85f13" stroke-width="3" marker-end="url(#arrow)"/>
+  <text x="820" y="924" font-size="13" fill="#6b6760">อ่าน/เขียนข้อมูลผ่าน Prisma 7 (ฝั่ง server เท่านั้น)</text>
+
+  <!-- ================= LAYER 5 : DATA ================= -->
+  <text x="40" y="958" font-size="14" font-weight="bold" fill="#c85f13">5. Data / Storage</text>
+  <rect x="40" y="966" width="1520" height="156" rx="14" fill="#ffffff" stroke="#d8d0c8" stroke-width="1.5"/>
+  <g>
+    <rect x="64" y="994" width="470" height="100" rx="12" fill="#f6f3ef" stroke="#c9c2b8" stroke-width="1.5"/>
+    <text x="299" y="1024" text-anchor="middle" font-size="16" font-weight="bold" fill="#292724">MariaDB + Prisma 7</text>
+    <text x="299" y="1050" text-anchor="middle" font-size="13" fill="#4a4640">ผู้ใช้/สิทธิ์ คำขอ ใบเสนอราคา TOR</text>
+    <text x="299" y="1070" text-anchor="middle" font-size="13" fill="#4a4640">แชต Session Audit Log</text>
+
+    <rect x="549" y="994" width="470" height="100" rx="12" fill="#fdeee2" stroke="#e87722" stroke-width="1.5"/>
+    <text x="784" y="1024" text-anchor="middle" font-size="16" font-weight="bold" fill="#a64610">คลังความรู้ระเบียบ (RAG)</text>
+    <text x="784" y="1050" text-anchor="middle" font-size="13" fill="#4a4640">ระเบียบ/ตัวอย่าง/workflow → ตัด Chunk</text>
+    <text x="784" y="1070" text-anchor="middle" font-size="13" fill="#4a4640">→ Embedding → ค้นด้วย Semantic Search</text>
+
+    <rect x="1034" y="994" width="470" height="100" rx="12" fill="#f6f3ef" stroke="#c9c2b8" stroke-width="1.5"/>
+    <text x="1269" y="1024" text-anchor="middle" font-size="16" font-weight="bold" fill="#292724">ไฟล์เอกสาร</text>
+    <text x="1269" y="1050" text-anchor="middle" font-size="13" fill="#4a4640">PDF/ภาพ (MuPDF + Sharp)</text>
+    <text x="1269" y="1070" text-anchor="middle" font-size="13" fill="#4a4640">.docx (PizZip + Docxtemplater)</text>
+  </g>
+
+  <!-- footer -->
+  <rect x="40" y="1150" width="1520" height="40" rx="10" fill="#eef4f0" stroke="#cfe3d6" stroke-width="1.5"/>
+  <text x="800" y="1175" text-anchor="middle" font-size="14" font-weight="bold" fill="#2e6b46">การไหลข้อมูล (RAG): คำถาม/เอกสาร → Embedding → ค้นหา Chunk ที่คล้าย → สร้างบริบท + citation → AI ตอบ (AI output = ฉบับร่าง ต้องให้เจ้าหน้าที่ตรวจสอบก่อนบันทึกเป็นทางการ)</text>
+</svg>

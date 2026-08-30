@@ -1,9 +1,5 @@
-import { GoogleGenAI } from "@google/genai";
-
-export const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
-
 export const EMBEDDING_MODEL = "text-embedding-004";
-export const CHAT_MODEL = "gemini-2.5-flash";
+export const CHAT_MODEL = "gemini-2.5-flash-lite";
 
 export interface Chunk {
   id: string;

@@ -2,31 +2,41 @@
 
 import React from "react";
 import { Input, Button, Dropdown, Avatar } from "@heroui/react";
-import { Search, Bell, Settings, User, LogOut, ChevronDown, ShieldCheck } from "lucide-react";
+import { Search, Bell, Settings, User, LogOut, ChevronDown } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { useTransition } from "react";
+import { authClient } from "@/lib/auth-client";
 
 export function Navbar() {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  function logout() {
+    startTransition(async () => {
+      await authClient.signOut();
+      router.replace("/login");
+      router.refresh();
+    });
+  }
+
   return (
     <header className="sticky top-0 z-40 flex h-16 w-full items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6 shadow-xs">
       {/* Left Zone: Brand Logo & Title */}
       <div className="flex items-center gap-3">
         <Link href="/admin" className="flex items-center gap-2.5 group transition-transform hover:scale-[1.01]">
-          <div className="grid h-10 w-10 place-items-center rounded-xl bg-[#8B0000] text-white shadow-md shadow-red-950/20">
-            <ShieldCheck className="h-6 w-6 stroke-[2.2]" />
-          </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xl font-black tracking-tight text-[#8B0000]">
-                ISKKU
-              </span>
-              <span className="h-4 w-px bg-slate-300" />
-              <span className="text-sm font-bold text-slate-800">
-                ระบบบริหารจัดการ
-              </span>
-            </div>
-            <p className="text-[0.7rem] font-medium text-slate-500">
-              คณะสหวิทยาการ มหาวิทยาลัยขอนแก่น
-            </p>
+          <Image
+            priority
+            src="/Logo-ISKKU-transparent.png"
+            alt="โลโก้คณะสหวิทยาการ มหาวิทยาลัยขอนแก่น"
+            width={2696}
+            height={648}
+            className="h-9 w-auto sm:h-10"
+          />
+          <div className="flex flex-col leading-tight border-l border-slate-300 pl-2.5">
+            <span className="text-sm font-bold text-[#8B0000] tracking-tight">ระบบติดตามและบริหารการจัดซื้อจัดจ้างอัจฉริยะ (I-Smart ProTrack)</span>
+            <span className="text-xs font-semibold text-slate-600">ของคณะสหวิทยาการ</span>
           </div>
         </Link>
       </div>
@@ -90,10 +100,12 @@ export function Navbar() {
               <Dropdown.Item
                 id="logout"
                 textValue="ออกจากระบบ"
+                isDisabled={isPending}
+                onAction={logout}
                 className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium text-[#8B0000] hover:bg-red-50 cursor-pointer border-t border-slate-100 mt-1"
               >
                 <LogOut className="h-4 w-4 text-[#8B0000]" />
-                <span>ออกจากระบบ</span>
+                <span>{isPending ? "กำลังออกจากระบบ..." : "ออกจากระบบ"}</span>
               </Dropdown.Item>
             </Dropdown.Menu>
           </Dropdown.Popover>

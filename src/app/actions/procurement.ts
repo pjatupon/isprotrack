@@ -74,7 +74,7 @@ export async function saveProcurementRequest(prevState: unknown, formData: FormD
     });
 
     revalidatePath("/requests");
-    revalidatePath("/dashboard");
+    revalidatePath("/");
     return { success: true, requestId: request.id, message: "บันทึกคำขอเรียบร้อยแล้ว" };
   } catch (error: unknown) {
     return { success: false, error: error instanceof Error ? error.message : "เกิดข้อผิดพลาดในการบันทึก" };
@@ -95,6 +95,11 @@ export async function saveTorDraft(prevState: unknown, formData: FormData) {
 
     if (!requestId) {
       return { success: false, error: "ไม่พบรหัสคำขอจัดซื้อจัดจ้าง" };
+    }
+
+    const existingRequest = await prisma.procurementRequest.findUnique({ where: { id: requestId } });
+    if (!existingRequest) {
+      return { success: false, error: `ไม่พบคำขอจัดซื้อจัดจ้างรหัส "${requestId}" — กรุณาสร้างคำขอจัดซื้อก่อนบันทึก TOR` };
     }
 
     // Find highest version
@@ -160,7 +165,7 @@ export async function updateRequestStatus(requestId: string, status: Procurement
     });
 
     revalidatePath("/requests");
-    revalidatePath("/dashboard");
+    revalidatePath("/");
     return { success: true, message: `อัปเดตสถานะเป็น ${status} เรียบร้อยแล้ว` };
   } catch (error: unknown) {
     return { success: false, error: error instanceof Error ? error.message : "เกิดข้อผิดพลาด" };

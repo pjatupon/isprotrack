@@ -8,6 +8,7 @@ import {
   processKnowledgeDocument,
   retryKnowledgeDocument,
   reindexKnowledgeDocument,
+  processKnowledgeText,
   type KnowledgeProcessDeps,
 } from "../src/lib/knowledge/pipeline";
 
@@ -230,4 +231,38 @@ test("processKnowledgeDocument throws when document has no file", async () => {
     () => processKnowledgeDocument("doc-1", makeDeps(fake.client)),
     /ไม่มีไฟล์ต้นฉบับ/,
   );
+});
+
+test("processKnowledgeText stores text and creates embeddings without a file", async () => {
+  const fake = makeFakeClient();
+  fake.documents.set("text-1", {
+    id: "text-1",
+    title: "คำถามที่พบบ่อย",
+    filePath: null,
+    mimeType: "text/plain",
+    status: "DRAFT",
+    dimensions: 3,
+  });
+
+  const result = await processKnowledgeText("text-1", "คำถาม: ต้องทำอย่างไร\nคำตอบ: ดำเนินการตามขั้นตอนในระบบ", makeDeps(fake.client));
+
+  assert.equal(result.status, "ACTIVE");
+  assert.ok(fake.documents.get("text-1")?.extractedText.includes("คำตอบ"));
+  assert.ok(fake.chunks.length >= 1);
+  assert.ok(fake.chunks.every((chunk) => chunk.embedding && chunk.checksum));
+});
+
+test("processKnowledgeText rejects empty text and marks the document failed", async () => {
+  const fake = makeFakeClient();
+  fake.documents.set("text-1", {
+    id: "text-1",
+    title: "ข้อความว่าง",
+    filePath: null,
+    mimeType: "text/plain",
+    status: "DRAFT",
+    dimensions: 3,
+  });
+
+  await assert.rejects(() => processKnowledgeText("text-1", "   ", makeDeps(fake.client)), /กรุณาระบุข้อความ/);
+  assert.equal(fake.documents.get("text-1")?.status, "FAILED");
 });

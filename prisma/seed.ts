@@ -1,6 +1,10 @@
 import "dotenv/config";
+import fs from "node:fs/promises";
+import path from "node:path";
 import { prisma } from "../src/lib/prisma";
 import { auth } from "../src/lib/auth";
+import { buildSimpleTemplateDocx } from "../src/lib/docx";
+import { FORM_TEMPLATE_ROOT } from "../src/lib/ai/form-router";
 import type { ProcurementStatus } from "../src/generated/prisma/enums";
 
 const DEMO_PASSWORD = "Ismart123!";
@@ -16,26 +20,83 @@ const DEMO_USERS = [
     name: "เจ้าหน้าที่พัสดุ Demo",
     email: "staff@kku.ac.th",
     role: "STAFF",
-    department: "งานพัสดุ คณะสหวิทยาการ",
+    department: "งานพัสดุ",
   },
   {
     name: "ผู้อนุมัติ Demo",
     email: "approver@kku.ac.th",
     role: "APPROVER",
-    department: "สำนักงานคณบดี คณะสหวิทยาการ",
+    department: "สำนักงานคณบดี",
   },
   {
     name: "ผู้ขอจัดซื้อ Demo",
     email: "requester@kku.ac.th",
     role: "REQUESTER",
-    department: "สาขาเทคโนโลยีสารสนเทศ",
+    department: "สาขาวิชาเทคโนโลยีสารสนเทศ",
   },
 ] as const;
 
-async function seedUsers() {
+async function seedDepartments() {
+  console.log("🌱 Seeding departments...");
+
+  const byName = new Map<string, string>();
+
+  const is = await prisma.department.upsert({
+    where: { code: "KKU-IS" },
+    update: { description: "หน่วยงานหลัก คณะสหวิทยาการ มหาวิทยาลัยขอนแก่น" },
+    create: {
+      name: "คณะสหวิทยาการ",
+      code: "KKU-IS",
+      description: "หน่วยงานหลัก คณะสหวิทยาการ มหาวิทยาลัยขอนแก่น",
+      sortOrder: 0,
+    },
+  });
+  byName.set(is.name, is.id);
+
+  const subDepartments = [
+    { name: "สำนักงานคณบดี", code: "IS-OD", description: "สำนักงานคณบดี คณะสหวิทยาการ" },
+    { name: "สำนักงานเลขานุการคณะ", code: "IS-SEC", description: "สำนักงานเลขานุการคณะ คณะสหวิทยาการ" },
+    { name: "งานพัสดุ", code: "IS-PHD", description: "งานพัสดุและจัดซื้อจัดจ้าง" },
+    { name: "งานการเงินและบัญชี", code: "IS-FIN", description: "งานการเงินและบัญชี" },
+    { name: "สาขาวิชาเทคโนโลยีสารสนเทศ", code: "IS-IT", description: "สาขาวิชาเทคโนโลยีสารสนเทศ" },
+    { name: "สาขาวิชาสารสนเทศศาสตร์", code: "IS-IS", description: "สาขาวิชาสารสนเทศศาสตร์" },
+    { name: "สาขาวิชานวัตกรรมและเทคโนโลยีดิจิทัล", code: "IS-DIT", description: "สาขาวิชานวัตกรรมและเทคโนโลยีดิจิทัล" },
+  ];
+
+  for (const sub of subDepartments) {
+    const department = await prisma.department.upsert({
+      where: { code: sub.code },
+      update: { parentId: is.id, description: sub.description },
+      create: {
+        name: sub.name,
+        code: sub.code,
+        description: sub.description,
+        parentId: is.id,
+        sortOrder: 1,
+      },
+    });
+    byName.set(department.name, department.id);
+  }
+
+  for (const child of subDepartments.filter((s) => s.code === "IS-PHD" || s.code === "IS-FIN")) {
+    const parent = byName.get("สำนักงานเลขานุการคณะ");
+    if (!parent) continue;
+    await prisma.department.update({
+      where: { code: child.code },
+      data: { parentId: parent },
+    });
+  }
+
+  console.log(`  • Seeded ${await prisma.department.count()} departments`);
+  return byName;
+}
+
+async function seedUsers(departmentIds: Map<string, string>) {
   console.log("🌱 Seeding users...");
 
   for (const demo of DEMO_USERS) {
+    const departmentId = departmentIds.get(demo.department) ?? null;
+
     const existing = await prisma.user.findUnique({
       where: { email: demo.email },
     });
@@ -46,6 +107,7 @@ async function seedUsers() {
         data: {
           role: demo.role,
           department: demo.department,
+          departmentId,
           emailVerified: true,
         },
       });
@@ -66,6 +128,8 @@ async function seedUsers() {
       where: { email: demo.email },
       data: {
         role: demo.role,
+        department: demo.department,
+        departmentId,
         emailVerified: true,
       },
     });
@@ -330,6 +394,42 @@ async function seedRequests(users: Awaited<ReturnType<typeof seedUsers>>) {
   }
 }
 
+async function seedAiSettings() {
+  console.log("🌱 Seeding AI settings...");
+
+  const defaults = [
+    {
+      name: "ai.baseUrl",
+      value: process.env.KKU_GENAI_BASE_URL || "https://gen.ai.kku.ac.th/api/v1",
+      description: "Base URL ของ API AI (OpenAI-compatible)",
+    },
+    {
+      name: "ai.apiKey",
+      value: process.env.KKU_GENAI_API_KEY || "",
+      description: "API Key สำหรับเรียกใช้งาน AI",
+    },
+    {
+      name: "ai.model",
+      value: process.env.KKU_GENAI_MODEL || "gemini-2.5-flash-lite",
+      description: "รุ่น Model สำหรับแชท/ประมวลผล",
+    },
+    {
+      name: "ai.embeddingModel",
+      value: process.env.KKU_GENAI_EMBEDDING_MODEL || "text-embedding-004",
+      description: "รุ่น Model สำหรับสร้าง Embedding",
+    },
+  ];
+
+  for (const setting of defaults) {
+    await prisma.setting.upsert({
+      where: { name: setting.name },
+      update: { description: setting.description },
+      create: setting,
+    });
+  }
+  console.log("  • AI settings — ready");
+}
+
 async function seedKnowledgeCategories() {
   console.log("🌱 Seeding knowledge categories...");
 
@@ -349,13 +449,253 @@ async function seedKnowledgeCategories() {
   }
 }
 
+async function seedFormTemplates() {
+  console.log("🌱 Seeding form templates (.docx)...");
+  await fs.mkdir(FORM_TEMPLATE_ROOT, { recursive: true });
+
+  const common = [
+    "requesterName",
+    "department",
+    "position",
+    "telephone",
+    "itemDetails",
+    "quantity",
+    "unit",
+    "budget",
+    "budgetSource",
+    "reason",
+    "dateNeeded",
+    "deliveryPlace",
+  ];
+
+  const templates = [
+    {
+      fileName: "แบบขอจัดซื้อวัสดุ (วงเงินไม่เกิน 100,000 บาท)",
+      category: "วัสดุ",
+      budgetMin: 0,
+      budgetMax: 100000,
+      placeholders: ["itemType", ...common],
+      lines: [
+        "แบบฟอร์มขอจัดซื้อวัสดุ (วงเงินไม่เกิน 100,000 บาท)",
+        "ชื่อผู้ขอ: {requesterName}    ตำแหน่ง: {position}",
+        "หน่วยงาน: {department}    โทร: {telephone}",
+        "ประเภทพัสดุ: {itemType}",
+        "รายละเอียด: {itemDetails}",
+        "จำนวน: {quantity} {unit}    วงเงิน: {budget} บาท",
+        "แหล่งงบประมาณ: {budgetSource}",
+        "เหตุผล/ความจำเป็น: {reason}",
+        "กำหนดใช้งาน: {dateNeeded}    สถานที่ส่งมอบ: {deliveryPlace}",
+      ],
+    },
+    {
+      fileName: "แบบขอจัดซื้อวัสดุ (วงเงินเกิน 100,000 บาท)",
+      category: "วัสดุ",
+      budgetMin: 100000.01,
+      budgetMax: null,
+      placeholders: ["itemType", ...common],
+      lines: [
+        "แบบฟอร์มขอจัดซื้อวัสดุ (วงเงินเกิน 100,000 บาท)",
+        "ชื่อผู้ขอ: {requesterName}    ตำแหน่ง: {position}",
+        "หน่วยงาน: {department}    โทร: {telephone}",
+        "ประเภทพัสดุ: {itemType}",
+        "รายละเอียด: {itemDetails}",
+        "จำนวน: {quantity} {unit}    วงเงิน: {budget} บาท",
+        "แหล่งงบประมาณ: {budgetSource}",
+        "เหตุผล/ความจำเป็น: {reason}",
+        "กำหนดใช้งาน: {dateNeeded}    สถานที่ส่งมอบ: {deliveryPlace}",
+        "หมายเหตุ: วงเงินเกิน 100,000 บาท ต้องแนบใบเสนอราคา 3 รายและทำบันทึกขออนุมัติ",
+      ],
+    },
+    {
+      fileName: "แบบขอจัดซื้อครุภัณฑ์ (วงเงินไม่เกิน 100,000 บาท)",
+      category: "ครุภัณฑ์",
+      budgetMin: 0,
+      budgetMax: 100000,
+      placeholders: ["itemType", ...common],
+      lines: [
+        "แบบฟอร์มขอจัดซื้อครุภัณฑ์ (วงเงินไม่เกิน 100,000 บาท)",
+        "ชื่อผู้ขอ: {requesterName}    ตำแหน่ง: {position}",
+        "หน่วยงาน: {department}    โทร: {telephone}",
+        "ประเภทครุภัณฑ์: {itemType}",
+        "รายละเอียด: {itemDetails}",
+        "จำนวน: {quantity} {unit}    วงเงิน: {budget} บาท",
+        "แหล่งงบประมาณ: {budgetSource}",
+        "เหตุผล/ความจำเป็น: {reason}",
+        "กำหนดใช้งาน: {dateNeeded}    สถานที่ส่งมอบ: {deliveryPlace}",
+      ],
+    },
+    {
+      fileName: "แบบขอจัดซื้อครุภัณฑ์ (วงเงินเกิน 100,000 บาท)",
+      category: "ครุภัณฑ์",
+      budgetMin: 100000.01,
+      budgetMax: null,
+      placeholders: ["itemType", ...common],
+      lines: [
+        "แบบฟอร์มขอจัดซื้อครุภัณฑ์ (วงเงินเกิน 100,000 บาท)",
+        "ชื่อผู้ขอ: {requesterName}    ตำแหน่ง: {position}",
+        "หน่วยงาน: {department}    โทร: {telephone}",
+        "ประเภทครุภัณฑ์: {itemType}",
+        "รายละเอียด: {itemDetails}",
+        "จำนวน: {quantity} {unit}    วงเงิน: {budget} บาท",
+        "แหล่งงบประมาณ: {budgetSource}",
+        "เหตุผล/ความจำเป็น: {reason}",
+        "กำหนดใช้งาน: {dateNeeded}    สถานที่ส่งมอบ: {deliveryPlace}",
+        "หมายเหตุ: วงเงินเกิน 100,000 บาท ต้องแนบใบเสนอราคา 3 รายและทำบันทึกขออนุมัติ",
+      ],
+    },
+    {
+      fileName: "แบบขอจ้างบริการ/จ้างเหมา (วงเงินไม่เกิน 100,000 บาท)",
+      category: "จ้างบริการ/จ้างเหมา",
+      budgetMin: 0,
+      budgetMax: 100000,
+      placeholders: ["itemType", ...common],
+      lines: [
+        "แบบฟอร์มขอจ้างบริการ/จ้างเหมา (วงเงินไม่เกิน 100,000 บาท)",
+        "ชื่อผู้ขอ: {requesterName}    ตำแหน่ง: {position}",
+        "หน่วยงาน: {department}    โทร: {telephone}",
+        "ประเภทงานจ้าง: {itemType}",
+        "ขอบเขตงาน: {itemDetails}",
+        "วงเงิน: {budget} บาท    แหล่งงบประมาณ: {budgetSource}",
+        "เหตุผล/ความจำเป็น: {reason}",
+        "กำหนดใช้งาน: {dateNeeded}    สถานที่ปฏิบัติงาน: {deliveryPlace}",
+      ],
+    },
+    {
+      fileName: "แบบขอจ้างบริการ/จ้างเหมา (วงเงินเกิน 100,000 บาท)",
+      category: "จ้างบริการ/จ้างเหมา",
+      budgetMin: 100000.01,
+      budgetMax: null,
+      placeholders: ["itemType", ...common],
+      lines: [
+        "แบบฟอร์มขอจ้างบริการ/จ้างเหมา (วงเงินเกิน 100,000 บาท)",
+        "ชื่อผู้ขอ: {requesterName}    ตำแหน่ง: {position}",
+        "หน่วยงาน: {department}    โทร: {telephone}",
+        "ประเภทงานจ้าง: {itemType}",
+        "ขอบเขตงาน: {itemDetails}",
+        "วงเงิน: {budget} บาท    แหล่งงบประมาณ: {budgetSource}",
+        "เหตุผล/ความจำเป็น: {reason}",
+        "กำหนดใช้งาน: {dateNeeded}    สถานที่ปฏิบัติงาน: {deliveryPlace}",
+      ],
+    },
+    {
+      fileName: "แบบขอจ้างซ่อมทรัพย์สิน",
+      category: "จ้างซ่อมทรัพย์สิน",
+      budgetMin: 0,
+      budgetMax: null,
+      placeholders: ["assetName", "assetCode", "defectDescription", ...common],
+      lines: [
+        "แบบฟอร์มขอจ้างซ่อมทรัพย์สิน",
+        "ชื่อผู้ขอ: {requesterName}    หน่วยงาน: {department}    โทร: {telephone}",
+        "ชื่อครุภัณฑ์: {assetName}    รหัสครุภัณฑ์: {assetCode}",
+        "รายละเอียดความชำรุด: {defectDescription}",
+        "วงเงินประมาณ: {budget} บาท",
+        "เหตุผล/ความจำเป็น: {reason}",
+        "กำหนดแล้วเสร็จ: {dateNeeded}",
+      ],
+    },
+    {
+      fileName: "ใบขอเบิกวัสดุ",
+      category: "เบิก/คืน/เคลื่อนย้าย",
+      budgetMin: 0,
+      budgetMax: null,
+      placeholders: ["itemType", ...common],
+      lines: [
+        "ใบขอเบิกวัสดุ",
+        "ผู้ขอเบิก: {requesterName}    หน่วยงาน: {department}    ตำแหน่ง: {position}",
+        "รายการวัสดุ: {itemDetails}",
+        "จำนวน: {quantity} {unit}",
+        "เหตุผลการเบิก: {reason}",
+        "วันที่เบิก: {dateNeeded}",
+      ],
+    },
+    {
+      fileName: "ใบเบิกครุภัณฑ์",
+      category: "เบิก/คืน/เคลื่อนย้าย",
+      budgetMin: 0,
+      budgetMax: null,
+      placeholders: ["assetName", "assetCode", ...common],
+      lines: [
+        "ใบเบิกครุภัณฑ์",
+        "ผู้ขอเบิก: {requesterName}    หน่วยงาน: {department}    ตำแหน่ง: {position}",
+        "ชื่อครุภัณฑ์: {assetName}    รหัสครุภัณฑ์: {assetCode}",
+        "เหตุผลการเบิก: {reason}",
+        "วันที่เบิก: {dateNeeded}",
+      ],
+    },
+    {
+      fileName: "แบบแจ้งเคลื่อนย้ายครุภัณฑ์",
+      category: "เบิก/คืน/เคลื่อนย้าย",
+      budgetMin: 0,
+      budgetMax: null,
+      placeholders: ["assetName", "assetCode", "fromPlace", "toPlace", ...common],
+      lines: [
+        "แบบแจ้งเคลื่อนย้ายครุภัณฑ์",
+        "ผู้แจ้ง: {requesterName}    หน่วยงาน: {department}",
+        "ชื่อครุภัณฑ์: {assetName}    รหัสครุภัณฑ์: {assetCode}",
+        "ย้ายจาก: {fromPlace}    ไปยัง: {toPlace}",
+        "เหตุผลการเคลื่อนย้าย: {reason}",
+        "กำหนดดำเนินการ: {dateNeeded}",
+      ],
+    },
+    {
+      fileName: "แบบส่งคืนพัสดุชำรุด",
+      category: "เบิก/คืน/เคลื่อนย้าย",
+      budgetMin: 0,
+      budgetMax: null,
+      placeholders: ["assetName", "assetCode", "defectDescription", ...common],
+      lines: [
+        "แบบส่งคืนพัสดุชำรุด",
+        "ผู้ส่งคืน: {requesterName}    หน่วยงาน: {department}",
+        "ชื่อพัสดุ/ครุภัณฑ์: {assetName}    รหัสครุภัณฑ์: {assetCode}",
+        "รายละเอียดความชำรุด: {defectDescription}",
+        "เหตุผล: {reason}",
+        "วันที่ส่งคืน: {dateNeeded}",
+      ],
+    },
+  ];
+
+  for (const template of templates) {
+    const storedName = `${template.fileName}.docx`.replace(/[^a-zA-Z0-9ก-๙\-_. ]/g, "_");
+    const filePath = path.join("templates", storedName);
+    await fs.writeFile(path.join(FORM_TEMPLATE_ROOT, storedName), buildSimpleTemplateDocx(template.lines));
+
+    await prisma.formTemplate.upsert({
+      where: { id: `seed-${template.fileName}` },
+      update: {
+        fileName: template.fileName,
+        category: template.category,
+        budgetMin: template.budgetMin,
+        budgetMax: template.budgetMax,
+        filePath,
+        placeholders: template.placeholders,
+        isActive: true,
+      },
+      create: {
+        id: `seed-${template.fileName}`,
+        fileName: template.fileName,
+        category: template.category,
+        budgetMin: template.budgetMin,
+        budgetMax: template.budgetMax,
+        filePath,
+        placeholders: template.placeholders,
+        description: `แบบฟอร์มมาตรฐาน: ${template.fileName}`,
+        isActive: true,
+      },
+    });
+    console.log(`  • ${template.fileName}`);
+  }
+}
+
 async function main() {
   console.log("========== IS ProTrack Database Seed ==========");
 
-  const users = await seedUsers();
+  const departmentIds = await seedDepartments();
+  const users = await seedUsers(departmentIds);
   await seedKnowledgeCategories();
   await seedRegulations();
   await seedRequests(users);
+  await seedAiSettings();
+  await seedFormTemplates();
 
   console.log("\n✅ Seed completed successfully!");
   console.log("\n🔑 Demo accounts (รหัสผ่านทั้งหมด: Ismart123!):");

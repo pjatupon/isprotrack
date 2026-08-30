@@ -14,8 +14,13 @@ import {
   Users,
   ShieldAlert,
   Sliders,
+  Sparkles,
   ChevronRight,
   HelpCircle,
+  Settings2,
+  MessageSquareText,
+  Home,
+  ScrollText,
 } from "lucide-react";
 
 type NavItem = {
@@ -42,7 +47,7 @@ const navigationGroups: NavGroup[] = [
     items: [
       { href: "/admin/departments", label: "หน่วยงาน", icon: Building2 },
       { href: "/admin/knowledge-base", label: "คลังความรู้ AI", icon: Bot },
-      { href: "/admin/forms", label: "ตัวสร้างแบบฟอร์ม", icon: FormInput },
+      { href: "/admin/form-templates", label: "คลังแบบฟอร์มเอกสาร", icon: FormInput },
       { href: "/admin/workflows", label: "ตัวสร้าง Workflow", icon: GitFork },
     ],
   },
@@ -51,6 +56,10 @@ const navigationGroups: NavGroup[] = [
     items: [
       { href: "/admin/users", label: "ข้อมูลผู้ใช้งานระบบ", icon: Users },
       { href: "/admin/rbac", label: "จัดการ RBAC", icon: ShieldAlert },
+      { href: "/admin/ai-settings", label: "ตั้งค่า AI", icon: Sparkles },
+      { href: "/admin/ai-prompts", label: "ปรับแต่ง Prompt AI", icon: Settings2 },
+      { href: "/admin/consult-sessions", label: "บันทึกการสนทนา AI", icon: MessageSquareText },
+      { href: "/admin/audit-log", label: "บันทึกการใช้งาน AI (Audit)", icon: ScrollText },
       { href: "/admin/settings", label: "ตั้งค่าระบบ", icon: Sliders },
     ],
   },
@@ -63,6 +72,16 @@ export function Sidebar() {
     <aside className="flex h-full w-[260px] flex-col justify-between border-r border-slate-200 bg-white">
       {/* Menu Groups */}
       <div className="flex-1 overflow-y-auto px-3 py-5 space-y-6">
+        <Link
+          href="/"
+          className="group relative flex items-center justify-between rounded-xl px-3 py-2.5 text-xs font-medium transition-all text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <Home className="h-4 w-4 shrink-0 text-slate-400 group-hover:text-slate-600" />
+            <span className="truncate">กลับหน้าแรก</span>
+          </div>
+          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-300 group-hover:translate-x-0.5 group-hover:text-slate-400" />
+        </Link>
         {navigationGroups.map((group) => (
           <div key={group.group} className="space-y-1">
             <p className="px-3 text-[0.68rem] font-bold tracking-wider text-slate-400 uppercase">

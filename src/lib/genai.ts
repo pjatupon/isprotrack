@@ -1,13 +1,16 @@
 "use server";
 
-const DEFAULT_BASE_URL = "https://gen.ai.kku.ac.th/api/v1";
-const DEFAULT_MODEL = "gemini-2.5-flash-lite";
-const DEFAULT_EMBEDDING_MODEL = "text-embedding-004";
-
+import { getAiSettings } from "@/lib/ai/settings";
+import {
+  generateLocalEmbeddings,
+  LOCAL_EMBEDDING_MODEL,
+} from "@/lib/ai/localEmbedding";
 interface AIGenerationOptions {
   model?: string;
   temperature?: number;
   maxTokens?: number;
+  system?: string;
+  timeoutMs?: number;
 }
 
 interface AIImageGenerationOptions extends AIGenerationOptions {
@@ -25,41 +28,23 @@ export type EmbeddingBatch = {
   vectors: number[][];
 };
 
-const AI_REQUEST_TIMEOUT_MS = 120_000;
+const AI_REQUEST_TIMEOUT_MS = 240_000;
 
 function resolveChatCompletionsUrl(baseUrl: string): string {
   return `${baseUrl}/chat/completions`;
 }
 
-function resolveEmbeddingsUrl(baseUrl: string): string {
-  return `${baseUrl}/embeddings`;
-}
-
-function getApiKey(): string {
-  return process.env.KKU_GENAI_API_KEY?.trim() ?? "";
-}
-
-function getBaseUrl(): string {
-  return (process.env.KKU_GENAI_BASE_URL?.trim() || DEFAULT_BASE_URL).replace(/\/+$/, "");
-}
-
-function getDefaultModel(): string {
-  return process.env.KKU_GENAI_MODEL?.trim() || DEFAULT_MODEL;
-}
-
 async function getResolvedAiSettings() {
-  const apiKey = getApiKey();
+  const settings = await getAiSettings();
 
-  if (!apiKey) {
-    console.error("KKU GenAI API key is missing. Please set KKU_GENAI_API_KEY in .env.");
+  if (!settings.apiKey) {
+    console.error(
+      "AI API key is missing. Please set it in the admin settings (Settings -> AI) or KKU_GENAI_API_KEY in .env.",
+    );
     throw new Error("API Key not configured");
   }
 
-  return {
-    apiKey,
-    model: getDefaultModel(),
-    apiUrl: resolveChatCompletionsUrl(getBaseUrl()),
-  };
+  return settings;
 }
 
 function getBaseHeaders(apiKey: string) {
@@ -90,35 +75,62 @@ function isAbortError(error: unknown): boolean {
 async function parseChatResponse(response: Response): Promise<string> {
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}));
-    console.error(`KKU GenAI API error: ${response.status}`, errorData);
+    console.error(`AI API error: ${response.status}`, errorData);
+
+    const upstream = errorData?.error?.message || errorData?.error || "";
 
     if (response.status === 401) {
-      throw new Error("Invalid API Key - please check KKU_GENAI_API_KEY");
+      if (typeof upstream === "string" && upstream.includes("daily limit")) {
+        throw new Error("Model นี้หมดโควตารายวัน (daily limit) กรุณาเปลี่ยน Model ในตั้งค่า AI");
+      }
+      if (typeof upstream === "string" && upstream.includes("Invalid model")) {
+        throw new Error("รุ่น Model ที่ระบุไม่ถูกต้อง กรุณาตรวจสอบในตั้งค่า AI");
+      }
+      throw new Error("Invalid API Key - please check AI settings");
     } else if (response.status === 403) {
-      throw new Error("KKU GenAI API access denied - please check your key permissions");
+      throw new Error("AI API access denied - please check your key permissions");
     } else if (response.status === 429) {
       throw new Error("Rate limit exceeded - please try again later");
     } else if (response.status === 500) {
-      throw new Error("KKU GenAI API server error - please try again later");
+      throw new Error("AI API server error - please try again later");
     }
 
-    throw new Error(`KKU GenAI API error: ${response.status} ${response.statusText}`);
+    throw new Error(`AI API error: ${response.status} ${response.statusText}`);
   }
 
   const data = await response.json();
 
-  if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+  if (!data || !data.choices || !data.choices[0] || !data.choices[0].message) {
     console.error("Unexpected API response format:", data);
-    throw new Error("Invalid response format from AI API");
+    const isEmpty = !data || Object.keys(data).length === 0;
+    throw new Error(
+      isEmpty
+        ? "AI API returned an empty response (ไฟล์อาจใหญ่เกินไปหรือ model ตอบสนองช้า) - please retry"
+        : "Invalid response format from AI API",
+    );
   }
 
-  const content = data.choices[0].message.content;
+  const message = data.choices[0].message;
+  const content = typeof message.content === "string" ? message.content : "";
+  const reasoning = typeof message.reasoning === "string" ? message.reasoning : "";
 
   if (!content) {
+    if (reasoning) {
+      return reasoning;
+    }
     throw new Error("AI returned empty response");
   }
 
   return content;
+}
+
+function buildMessages(prompt: string, system?: string) {
+  const messages: Array<{ role: string; content: string }> = [];
+  if (system) {
+    messages.push({ role: "system", content: system });
+  }
+  messages.push({ role: "user", content: prompt });
+  return messages;
 }
 
 function extractJsonObject(text: string): string {
@@ -142,29 +154,34 @@ export async function generateText(
     model = settings.model,
     temperature = 0.7,
     maxTokens = 2000,
+    system,
+    timeoutMs = AI_REQUEST_TIMEOUT_MS,
   } = options;
 
   try {
-    const response = await fetchWithTimeout(settings.apiUrl, {
-      method: "POST",
-      headers: getBaseHeaders(settings.apiKey),
-      body: JSON.stringify({
-        model,
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-        temperature,
-        max_tokens: maxTokens,
-      }),
-    });
+    const response = await fetchWithTimeout(
+      resolveChatCompletionsUrl(settings.baseUrl),
+      {
+        method: "POST",
+        headers: getBaseHeaders(settings.apiKey),
+        body: JSON.stringify({
+          model,
+          messages: buildMessages(prompt, system),
+          temperature,
+          max_tokens: maxTokens,
+        }),
+      },
+      timeoutMs,
+    );
 
     return await parseChatResponse(response);
   } catch (error) {
     if (isAbortError(error)) {
-      throw new Error("AI ตอบสนองช้าเกินไป กรุณาลองใหม่อีกครั้ง");
+      throw new Error(
+        timeoutMs >= 120_000
+          ? "AI ตอบสนองช้าเกินไป กรุณาลองใหม่อีกครั้ง"
+          : `AI ตอบสนองช้าเกินไป (เกิน ${Math.round(timeoutMs / 1000)} วินาที) กรุณาลองใหม่อีกครั้ง`,
+      );
     }
 
     console.error("AI Generation Error:", error);
@@ -195,7 +212,8 @@ export async function generateTextWithRetry(
 
       if (
         lastError.message.includes("Invalid API Key") ||
-        lastError.message.includes("Invalid response format")
+        lastError.message.includes("Invalid response format") ||
+        lastError.message.includes("API Key not configured")
       ) {
         throw lastError;
       }
@@ -248,6 +266,67 @@ Please provide only the English translation without any additional explanation.
   });
 }
 
+export async function generateTextWithImage(
+  prompt: string,
+  imageBase64: string,
+  options: AIImageGenerationOptions = {},
+): Promise<string> {
+  const settings = await getResolvedAiSettings();
+  const {
+    model = settings.model,
+    temperature = 0.2,
+    maxTokens = 3000,
+    mimeType = "image/jpeg",
+    system,
+    timeoutMs = AI_REQUEST_TIMEOUT_MS,
+  } = options;
+
+  try {
+    const response = await fetchWithTimeout(
+      resolveChatCompletionsUrl(settings.baseUrl),
+      {
+        method: "POST",
+        headers: getBaseHeaders(settings.apiKey),
+        body: JSON.stringify({
+          model,
+          messages: [
+            ...(system ? [{ role: "system", content: system }] : []),
+            {
+              role: "user",
+              content: [
+                { type: "text", text: prompt },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: `data:${mimeType};base64,${imageBase64}`,
+                  },
+                },
+              ],
+            },
+          ],
+          temperature,
+          max_tokens: maxTokens,
+        }),
+      },
+      timeoutMs,
+    );
+
+    return await parseChatResponse(response);
+  } catch (error) {
+    if (isAbortError(error)) {
+      throw new Error("AI ตอบสนองช้าเกินไป กรุณาลองใหม่อีกครั้ง");
+    }
+
+    console.error("AI Text With Image Generation Error:", error);
+
+    if (error instanceof Error) {
+      throw error;
+    }
+
+    throw new Error("An unexpected error occurred during image consultation");
+  }
+}
+
 export async function generateJsonFromImage<T>(
   prompt: string,
   imageBase64: string,
@@ -259,15 +338,17 @@ export async function generateJsonFromImage<T>(
     temperature = 0.1,
     maxTokens = 1200,
     mimeType = "image/jpeg",
+    system,
   } = options;
 
   try {
-    const response = await fetchWithTimeout(settings.apiUrl, {
+    const response = await fetchWithTimeout(resolveChatCompletionsUrl(settings.baseUrl), {
       method: "POST",
       headers: getBaseHeaders(settings.apiKey),
       body: JSON.stringify({
         model,
         messages: [
+          ...(system ? [{ role: "system", content: system }] : []),
           {
             role: "user",
             content: [
@@ -309,7 +390,7 @@ export async function extractTextFromDocument(input: AIDocumentInput): Promise<s
   const settings = await getResolvedAiSettings();
   const dataUrl = `data:${input.mimeType};base64,${input.base64}`;
 
-  const response = await fetchWithTimeout(settings.apiUrl, {
+  const response = await fetchWithTimeout(resolveChatCompletionsUrl(settings.baseUrl), {
     method: "POST",
     headers: getBaseHeaders(settings.apiKey),
     body: JSON.stringify({
@@ -339,47 +420,8 @@ export async function extractTextFromDocument(input: AIDocumentInput): Promise<s
 
 export async function generateEmbeddings(input: string[]): Promise<EmbeddingBatch> {
   if (!input.length) {
-    return { model: DEFAULT_EMBEDDING_MODEL, vectors: [] };
+    return { model: LOCAL_EMBEDDING_MODEL, vectors: [] };
   }
 
-  const settings = await getResolvedAiSettings();
-  const model = process.env.KKU_GENAI_EMBEDDING_MODEL?.trim() || DEFAULT_EMBEDDING_MODEL;
-  const response = await fetchWithTimeout(resolveEmbeddingsUrl(getBaseUrl()), {
-    method: "POST",
-    headers: getBaseHeaders(settings.apiKey),
-    body: JSON.stringify({ model, input, encoding_format: "float" }),
-  });
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    console.error(`KKU GenAI embedding error: ${response.status}`, errorData);
-    throw new Error(`ไม่สามารถสร้าง vector ได้ (${response.status})`);
-  }
-
-  const data = (await response.json()) as {
-    data?: Array<{ embedding?: number[]; index?: number }>;
-    model?: string;
-  };
-  const vectors = [...(data.data ?? [])]
-    .sort((left, right) => (left.index ?? 0) - (right.index ?? 0))
-    .map((item) => item.embedding)
-    .filter((embedding): embedding is number[] => Array.isArray(embedding));
-
-  if (vectors.length !== input.length) {
-    throw new Error("AI ส่ง vector กลับมาไม่ครบถ้วน");
-  }
-
-  const dimensions = vectors[0]?.length ?? 0;
-  const isValid =
-    dimensions > 0 &&
-    vectors.every(
-      (vector) =>
-        vector.length === dimensions &&
-        vector.every((value) => typeof value === "number" && Number.isFinite(value)),
-    );
-  if (!isValid) {
-    throw new Error("AI ส่ง vector ที่ไม่ถูกต้อง (ขนาดหรือค่าผิดปกติ)");
-  }
-
-  return { model: data.model || model, vectors };
+  return { model: LOCAL_EMBEDDING_MODEL, vectors: generateLocalEmbeddings(input) };
 }

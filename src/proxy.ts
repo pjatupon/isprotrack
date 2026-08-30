@@ -26,7 +26,7 @@ export async function proxy(request: NextRequest) {
     const role = (session.user as { role?: string }).role;
 
     if (!role || !allowedRoles.includes(role as never)) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+      return NextResponse.redirect(new URL("/", request.url));
     }
   }
 
@@ -35,6 +35,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/",
     "/admin/:path*",
     "/staff/:path*",
     "/approver/:path*",

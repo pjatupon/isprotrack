@@ -12,7 +12,8 @@ import {
   removeQuarantinedFile,
   resolveKnowledgeFilePath,
 } from "@/lib/knowledge/file";
-import { processKnowledgeDocument, retryKnowledgeDocument, reindexKnowledgeDocument } from "@/lib/knowledge/pipeline";
+import { processKnowledgeDocument, processKnowledgeText, retryKnowledgeDocument, reindexKnowledgeDocument } from "@/lib/knowledge/pipeline";
+import { createHash } from "node:crypto";
 import { extractDocumentText } from "@/lib/ai/document";
 import { embedTexts } from "@/lib/ai/rag";
 import { EMBEDDING_MODEL } from "@/lib/ai";
@@ -88,6 +89,50 @@ export async function deleteKnowledgeCategory(id: string) {
   }
 }
 
+// ---------- Document Content ----------
+
+export async function getKnowledgeDocumentContent(documentId: string) {
+  try {
+    await requireKnowledgeAccess();
+    const doc = await prisma.regulationDocument.findUnique({
+      where: { id: documentId },
+      select: {
+        id: true,
+        title: true,
+        extractedText: true,
+        chunks: {
+          orderBy: { chunkIndex: "asc" },
+          select: {
+            id: true,
+            chunkIndex: true,
+            content: true,
+            section: true,
+            page: true,
+          },
+        },
+      },
+    });
+    if (!doc) return { success: false, error: "ไม่พบเอกสาร" };
+    return {
+      success: true,
+      data: {
+        id: doc.id,
+        title: doc.title,
+        extractedText: doc.extractedText ?? null,
+        chunks: doc.chunks.map((c) => ({
+          id: c.id,
+          chunkIndex: c.chunkIndex,
+          content: c.content,
+          section: c.section ?? null,
+          page: c.page ?? null,
+        })),
+      },
+    };
+  } catch (error) {
+    return errorResult(error);
+  }
+}
+
 // ---------- Documents ----------
 
 export async function uploadKnowledgeDocument(prevState: unknown, formData: FormData) {
@@ -102,9 +147,7 @@ export async function uploadKnowledgeDocument(prevState: unknown, formData: Form
     if (!file || file.size === 0) {
       return { success: false, error: "กรุณาเลือกไฟล์เอกสาร" };
     }
-    if (!title) {
-      return { success: false, error: "กรุณาระบุชื่อเอกสาร" };
-    }
+    const docTitle = title || file.name.replace(/\.[^.]+$/, "");
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const validation = validateKnowledgeFile(buffer, file.type);
@@ -127,13 +170,14 @@ export async function uploadKnowledgeDocument(prevState: unknown, formData: Form
 
       const created = await prisma.regulationDocument.create({
         data: {
-          title,
+          title: docTitle,
           status: "DRAFT",
           categoryId,
           documentType,
           originalName: file.name,
           storedName,
           filePath: storedName,
+          fileUrl: `/media/${storedName}`,
           mimeType: validation.mimeType,
           fileSize: buffer.length,
           checksum,
@@ -142,7 +186,7 @@ export async function uploadKnowledgeDocument(prevState: unknown, formData: Form
       });
       documentId = created.id;
 
-      await writeAudit(userId, "knowledge.document.uploaded", `อัปโหลดเอกสาร: ${title}`, {
+      await writeAudit(userId, "knowledge.document.uploaded", `อัปโหลดเอกสาร: ${docTitle}`, {
         documentId,
         originalName: file.name,
       });
@@ -183,6 +227,68 @@ export async function uploadKnowledgeDocument(prevState: unknown, formData: Form
       }
       return errorResult(error);
     }
+  } catch (error) {
+    return errorResult(error);
+  }
+}
+
+export async function createKnowledgeText(prevState: unknown, formData: FormData) {
+  try {
+    const { userId } = await requireKnowledgeAccess();
+    const title = (formData.get("title") as string)?.trim();
+    const content = (formData.get("content") as string)?.trim();
+    const categoryId = (formData.get("categoryId") as string) || null;
+    const documentType = (formData.get("documentType") as KnowledgeDocumentType) || "OTHER";
+
+    if (!title) return { success: false, error: "กรุณาระบุชื่อรายการความรู้" };
+    if (!content) return { success: false, error: "กรุณาระบุข้อความความรู้" };
+
+    const checksum = createHash("sha256").update(content).digest("hex");
+    const existing = await prisma.regulationDocument.findFirst({
+      where: { checksum, status: { not: "ARCHIVED" } },
+    });
+    if (existing) return { success: false, error: "ข้อความนี้มีอยู่ในระบบแล้ว (ซ้ำ)" };
+
+    const document = await prisma.regulationDocument.create({
+      data: {
+        title,
+        status: "DRAFT",
+        categoryId,
+        documentType,
+        originalName: null,
+        mimeType: "text/plain",
+        fileSize: Buffer.byteLength(content, "utf8"),
+        checksum,
+        dimensions: 768,
+      },
+    });
+
+    await writeAudit(userId, "knowledge.document.text_created", `เพิ่มข้อความเข้าสู่คลังความรู้: ${title}`, {
+      documentId: document.id,
+    });
+
+    try {
+      await processKnowledgeText(document.id, content, {
+        client: prisma,
+        extractText: async () => ({ text: "" }),
+        embedTexts,
+        readFile: async () => Buffer.alloc(0),
+        resolveFilePath: resolveKnowledgeFilePath,
+        audit: async (action, prompt, output) => {
+          await prisma.auditLog.create({ data: { userId, action, prompt, output: JSON.stringify(output) } });
+        },
+        embeddingModelName: EMBEDDING_MODEL,
+      });
+    } catch (processingError) {
+      return {
+        success: false,
+        error: `บันทึกข้อความสำเร็จ แต่การประมวลผลล้มเหลว: ${processingError instanceof Error ? processingError.message : "เกิดข้อผิดพลาด"}`,
+        documentId: document.id,
+      };
+    }
+
+    revalidatePath("/admin/knowledge-base");
+    return { success: true, message: "เพิ่มและประมวลผลข้อความเรียบร้อย", documentId: document.id };
   } catch (error) {
     return errorResult(error);
   }

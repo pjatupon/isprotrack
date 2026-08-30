@@ -49,6 +49,7 @@ model User {
   image         String?   @db.Text
   role          UserRole  @default(REQUESTER)
   department    String?
+  departmentId  String?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   accounts      Account[]
@@ -56,6 +57,10 @@ model User {
   requests      ProcurementRequest[]
   reviewedChunks RegulationChunk[] @relation("ChunkReviewer")
   auditLogs     AuditLog[]
+  consultSessions ConsultSession[]
+  departmentRef Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+
+  @@index([departmentId])
 }
 
 model Account {
@@ -147,6 +152,24 @@ model KnowledgeCategory {
   @@index([isActive, name])
 }
 
+model Department {
+  id          String       @id @default(cuid())
+  name        String
+  code        String?      @unique
+  description String?
+  parentId    String?
+  sortOrder   Int          @default(0)
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  parent      Department?  @relation("DepartmentTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children    Department[] @relation("DepartmentTree")
+  users       User[]
+
+  @@index([parentId])
+  @@index([isActive, name])
+}
+
 model RegulationChunk {
   id         String              @id @default(cuid())
   documentId String
@@ -230,4 +253,57 @@ model AuditLog {
   user             User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([userId, timestamp])
+}
+
+model Setting {
+  name        String    @id
+  value       String?   @db.Text
+  description String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([updatedAt])
+}
+
+model FormTemplate {
+  id           String   @id @default(cuid())
+  fileName     String
+  category     String
+  budgetMin    Float    @default(0)
+  budgetMax    Float?
+  filePath     String
+  placeholders Json
+  description  String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([category, budgetMin, isActive])
+  @@index([isActive])
+}
+
+model ConsultSession {
+  id          String            @id @default(cuid())
+  userId      String
+  title       String            @default("การสนทนาปรึกษาการจัดซื้อ")
+  wizardState Json?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  user        User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages    ConsultMessage[]
+
+  @@index([userId, updatedAt])
+}
+
+model ConsultMessage {
+  id         String           @id @default(cuid())
+  sessionId  String
+  role       String
+  content    String           @db.LongText
+  citations  Json?
+  confidence Float?
+  createdAt  DateTime         @default(now())
+  session    ConsultSession   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
 }

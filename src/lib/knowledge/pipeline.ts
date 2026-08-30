@@ -77,54 +77,7 @@ export async function processKnowledgeDocument(
   try {
     const buffer = await deps.readFile(doc.filePath);
     const { text, suggestedTitle, chunks } = await prepareDocumentKnowledge(buffer, doc.mimeType, deps);
-
-    const dimensions = doc.dimensions ?? 768;
-    const { vectors, dimensions: actualDimensions } = await deps.embedTexts(
-      chunks.map((chunk) => chunk.content),
-      dimensions,
-    );
-    const validation = validateEmbeddingBatch(vectors, actualDimensions);
-    if (!validation.valid) {
-      throw new Error(
-        `Embedding คืนค่าไม่ตรงมิติ (คาด ${validation.expected} ได้รับ ${validation.received} ที่ดัชนี ${validation.invalidIndex})`,
-      );
-    }
-
-    await client.$transaction([
-      client.regulationChunk.deleteMany({ where: { documentId } }),
-      client.regulationDocument.update({
-        where: { id: documentId },
-        data: {
-          status: "ACTIVE",
-          title: suggestedTitle ?? doc.title,
-          extractedText: text,
-          embeddingModel: deps.embeddingModelName ?? "text-embedding-004",
-          dimensions: actualDimensions,
-          processingNote: null,
-        },
-      }),
-      ...vectors.map((vector, index) =>
-        client.regulationChunk.create({
-          data: {
-            documentId,
-            chunkIndex: index,
-            section: chunks[index].section,
-            page: chunks[index].page,
-            content: chunks[index].content,
-            checksum: chunkChecksum(chunks[index].content),
-            embedding: JSON.stringify(vector),
-          },
-        }),
-      ),
-    ]);
-
-    await audit("knowledge.document.processed", `ประมวลผลเอกสารสำเร็จ: ${doc.title}`, {
-      documentId,
-      chunkCount: vectors.length,
-      dimensions: actualDimensions,
-    });
-
-    return { documentId, chunkCount: vectors.length, dimensions: actualDimensions, status: "ACTIVE" };
+    return await storeKnowledgeContent(documentId, doc, text, chunks, deps, suggestedTitle);
   } catch (error) {
     const message = error instanceof Error ? error.message : "เกิดข้อผิดพลาดในการประมวลผล";
     await client.regulationDocument.update({
@@ -138,6 +91,97 @@ export async function processKnowledgeDocument(
       documentId,
       error: message,
     });
+    throw error;
+  }
+}
+
+async function storeKnowledgeContent(
+  documentId: string,
+  doc: { title: string; dimensions: number | null },
+  text: string,
+  chunks: KnowledgeTextChunk[],
+  deps: KnowledgeProcessDeps,
+  suggestedTitle?: string,
+): Promise<KnowledgeProcessResult> {
+  const { client, audit } = deps;
+
+  const dimensions = doc.dimensions ?? 768;
+  const { vectors, dimensions: actualDimensions } = await deps.embedTexts(
+    chunks.map((chunk) => chunk.content),
+    dimensions,
+  );
+  const validation = validateEmbeddingBatch(vectors, actualDimensions);
+  if (!validation.valid) {
+    throw new Error(
+      `Embedding คืนค่าไม่ตรงมิติ (คาด ${validation.expected} ได้รับ ${validation.received} ที่ดัชนี ${validation.invalidIndex})`,
+    );
+  }
+
+  await client.$transaction([
+    client.regulationChunk.deleteMany({ where: { documentId } }),
+    client.regulationDocument.update({
+      where: { id: documentId },
+      data: {
+        status: "ACTIVE",
+        title: suggestedTitle ?? undefined,
+        extractedText: text,
+        embeddingModel: deps.embeddingModelName ?? "text-embedding-004",
+        dimensions: actualDimensions,
+        processingNote: null,
+      },
+    }),
+    ...vectors.map((vector, index) =>
+      client.regulationChunk.create({
+        data: {
+          documentId,
+          chunkIndex: index,
+          section: chunks[index].section,
+          page: chunks[index].page,
+          content: chunks[index].content,
+          checksum: chunkChecksum(chunks[index].content),
+          embedding: JSON.stringify(vector),
+        },
+      }),
+    ),
+  ]);
+
+  await audit("knowledge.document.processed", `ประมวลผลเอกสารสำเร็จ: ${doc.title}`, {
+    documentId,
+    chunkCount: vectors.length,
+    dimensions: actualDimensions,
+  });
+
+  return { documentId, chunkCount: vectors.length, dimensions: actualDimensions, status: "ACTIVE" };
+}
+
+export async function processKnowledgeText(
+  documentId: string,
+  text: string,
+  deps: KnowledgeProcessDeps,
+): Promise<KnowledgeProcessResult> {
+  const { client, audit } = deps;
+  const doc = await client.regulationDocument.findUnique({
+    where: { id: documentId },
+    include: { chunks: true },
+  });
+  if (!doc) throw new Error("ไม่พบเอกสาร");
+  if (doc.status === "PROCESSING") throw new Error("เอกสารกำลังถูกประมวลผลโดยงานอื่น");
+
+  await client.regulationDocument.update({
+    where: { id: documentId },
+    data: { status: "PROCESSING", processingNote: null },
+  });
+
+  try {
+    const normalized = normalizeKnowledgeText(text);
+    if (!normalized) throw new Error("กรุณาระบุข้อความความรู้");
+    const chunks = splitIntoKnowledgeChunks(normalized);
+    if (chunks.length === 0) throw new Error("ไม่สามารถตัดแบ่งข้อความได้");
+    return await storeKnowledgeContent(documentId, doc, normalized, chunks, deps);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "เกิดข้อผิดพลาดในการประมวลผล";
+    await client.regulationDocument.update({ where: { id: documentId }, data: { status: "FAILED", processingNote: message } });
+    await audit("knowledge.document.failed", `ประมวลผลข้อความไม่สำเร็จ: ${doc.title}`, { documentId, error: message });
     throw error;
   }
 }

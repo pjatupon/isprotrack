@@ -3,7 +3,7 @@ import path from "node:path";
 import fs from "node:fs/promises";
 
 export const KNOWLEDGE_FILE_MAX_SIZE = 15 * 1024 * 1024;
-export const KNOWLEDGE_FILE_ROOT = path.join(process.cwd(), "storage", "knowledge");
+export const KNOWLEDGE_FILE_ROOT = path.join(process.cwd(), "public", "media");
 
 export interface KnowledgeFileValidation {
   valid: boolean;

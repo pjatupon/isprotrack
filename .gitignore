@@ -32,6 +32,9 @@ next-env.d.ts.bak
 # Private File Storage
 /storage/
 
+# User-uploaded knowledge documents (served publicly but never committed)
+/public/media/
+
 # Logs & Runtime Debugging
 npm-debug.log*
 yarn-debug.log*

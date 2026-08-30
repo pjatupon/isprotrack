@@ -13,11 +13,11 @@ export default function AdminLayout({
       <Navbar />
 
       {/* Main Workspace: Sidebar + Content */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1">
         {/* Left Fixed Sidebar (hidden on mobile, can be toggled if needed) */}
-        <div className="hidden md:block h-[calc(100vh-4rem)] sticky top-16 shrink-0">
+        <aside className="hidden md:block sticky top-16 h-[calc(100vh-4rem)] shrink-0">
           <Sidebar />
-        </div>
+        </aside>
 
         {/* Scrollable Main Area */}
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
