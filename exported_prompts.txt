@@ -1,0 +1,2247 @@
+=== Session: สร้างไฟล์ .mcp.json สำหรับ MCP Servers (2026-08-29 15:05:54) ===|สร้างไฟล์ .mcp.json ให้หนอ่ยตามนี้
+
+{  "mcpServers": {
+    "nextjs-docs": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-fetch"
+      ],
+      "env": {
+        "DEFAULT_DOCS_URL": "https://nextjs.org/docs"
+      }
+    },
+    "heroui-v3-docs": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-fetch"
+      ],
+      "env": {
+        "DEFAULT_DOCS_URL": "https://heroui.com/docs"
+      }
+    },
+    "prisma-mariadb": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-mariadb"
+      ]
+    }
+  }
+}
+=== Session: สร้างไฟล์ .mcp.json สำหรับ MCP Servers (2026-08-29 15:05:54) ===|คุณคือ Senior Full-Stack Developer ช่วยเริ่มต้นโปรเจกต์ Next.js 16.3 สำหรับ "ระบบติดตามและบริหารการจัดซื้อจัดจ้างอัจฉริยะ คณะสหวิทยาการ มหาวิทยาลัยขอนแก่น"
+
+[MCP DIRECTIVE]
+- เรียกใช้ MCP Server `nextjs-docs` เพื่อตรวจสอบฟีเจอร์และ Routing Convention ของ Next.js 16.3 App Router (เช่น React Server Components, Server Actions และ Caching updates ล่าสุด)
+- เรียกใช้ MCP Server `heroui-v3-docs` เพื่ออ่านโครงสร้าง Providers และ Tailwind CSS v4 setup ของ HeroUI v3
+
+
+ข้อกำหนดเทคโนโลยี:
+- Framework: Next.js 16.3 (App Router, TypeScript)
+- UI Library: HeroUI v3 (@heroui/react), Tailwind CSS, react-icons
+- Database: MySQL/MariaDB ใช้ Prisma ORM ร่วมกับ `@prisma/adapter-mariadb`
+- Flow Diagram: @xyflow/react
+
+
+สิ่งที่ต้องดำเนินการ:
+1. สร้าง Prisma Schema (`prisma/schema.prisma`) สำหรับ MariaDB รองรับโมดูลทั้งหมดตาม PRD:
+   - `User`, `Account`, `Session`, `Verification` (มาตรฐาน Better Auth) เพิ่ม field: `role` (REQUESTER, STAFF, APPROVER, ADMIN), `department`
+   - `RegulationDocument`: เอกสารระเบียบ (`title`, `issueNo`, `effectiveFrom`, `effectiveTo`, `status`: DRAFT/ACTIVE/SUPERSEDED/ARCHIVED, `fileUrl`)
+   - `RegulationChunk`: ข้อความย่อยระเบียบ (`documentId`, `content`, `embedding` แบบ LongText/JSON, `section`, `page`, `checksum`, `reviewedBy`, `reviewedAt`)
+   - `ProcurementRequest`: คำขอจัดซื้อจัดจ้าง (`title`, `objective`, `budget`, `budgetSource`, `procurementType`, `procurementMethod`, `status`, `requesterId`)
+   - `DocumentIntake`: ข้อมูล OCR ใบเสนอราคา (`requestId`, `vendorName`, `taxId`, `totalAmount`, `vatAmount`, `priceValidityDays`, `rawOcrJson`, `isVerified`)
+   - `TorDraft`: ร่าง TOR (`requestId`, `objective`, `scope`, `specifications`, `deliverables`, `inspectionCriteria`, `version`, `isLockInRisk`)
+   - `AuditLog`: ประวัติ (`userId`, `action`, `prompt`, `retrievedSources`, `modelName`, `output`, `timestamp`)
+
+
+2. สร้างไฟล์ `lib/prisma.ts` เพื่อ initialize Prisma Client ด้วย `@prisma/adapter-mariadb`
+3. สร้างโครงสร้าง Folder ตาม Next.js 16.3 App Router Standard (src/app, src/components, src/lib, src/types)
+
+เน้นย้ำว่าใช้ฐานข้อมูล mysql บน prisma mariadbadapter นะครับ
+โดยมี user ของ mysql คือ root@localhost รหัสผ่านของ root คือว่างหรือไม่มี
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|คุณคือ Senior Full-Stack Developer ช่วยเริ่มต้นโปรเจกต์ Next.js 16.3 สำหรับ "ระบบติดตามและบริหารการจัดซื้อจัดจ้างอัจฉริยะ คณะสหวิทยาการ มหาวิทยาลัยขอนแก่น"
+
+[MCP DIRECTIVE]
+- เรียกใช้ MCP Server `nextjs-docs` เพื่อตรวจสอบฟีเจอร์และ Routing Convention ของ Next.js 16.3 App Router (เช่น React Server Components, Server Actions และ Caching updates ล่าสุด)
+- เรียกใช้ MCP Server `heroui-v3-docs` เพื่ออ่านโครงสร้าง Providers และ Tailwind CSS v4 setup ของ HeroUI v3
+
+
+ข้อกำหนดเทคโนโลยี:
+- Framework: Next.js 16.3 (App Router, TypeScript)
+- UI Library: HeroUI v3 (@heroui/react), Tailwind CSS, react-icons
+- Database: MySQL/MariaDB ใช้ Prisma ORM ร่วมกับ `@prisma/adapter-mariadb`
+- Flow Diagram: @xyflow/react
+
+
+สิ่งที่ต้องดำเนินการ:
+1. สร้าง Prisma Schema (`prisma/schema.prisma`) สำหรับ MariaDB รองรับโมดูลทั้งหมดตาม PRD:
+   - `User`, `Account`, `Session`, `Verification` (มาตรฐาน Better Auth) เพิ่ม field: `role` (REQUESTER, STAFF, APPROVER, ADMIN), `department`
+   - `RegulationDocument`: เอกสารระเบียบ (`title`, `issueNo`, `effectiveFrom`, `effectiveTo`, `status`: DRAFT/ACTIVE/SUPERSEDED/ARCHIVED, `fileUrl`)
+   - `RegulationChunk`: ข้อความย่อยระเบียบ (`documentId`, `content`, `embedding` แบบ LongText/JSON, `section`, `page`, `checksum`, `reviewedBy`, `reviewedAt`)
+   - `ProcurementRequest`: คำขอจัดซื้อจัดจ้าง (`title`, `objective`, `budget`, `budgetSource`, `procurementType`, `procurementMethod`, `status`, `requesterId`)
+   - `DocumentIntake`: ข้อมูล OCR ใบเสนอราคา (`requestId`, `vendorName`, `taxId`, `totalAmount`, `vatAmount`, `priceValidityDays`, `rawOcrJson`, `isVerified`)
+   - `TorDraft`: ร่าง TOR (`requestId`, `objective`, `scope`, `specifications`, `deliverables`, `inspectionCriteria`, `version`, `isLockInRisk`)
+   - `AuditLog`: ประวัติ (`userId`, `action`, `prompt`, `retrievedSources`, `modelName`, `output`, `timestamp`)
+
+
+2. สร้างไฟล์ `lib/prisma.ts` เพื่อ initialize Prisma Client ด้วย `@prisma/adapter-mariadb`
+3. สร้างโครงสร้าง Folder ตาม Next.js 16.3 App Router Standard (src/app, src/components, src/lib, src/types)
+
+ทำให้อีกรอบหน่อยครับ session ทีแล้วล่มไปก่อนเสร็จ
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|คุณคือ Authentication Specialist ช่วยติดตั้ง Better Auth สำหรับระบบจัดซื้อจัดจ้าง คณะสหวิทยาการ มหาวิทยาลัยขอนแก่น
+
+[MCP DIRECTIVE]
+- เรียกใช้ MCP Server `nextjs-docs` เพื่อตรวจสอบการตั้งค่า Middleware และ Route Handlers ใน Next.js 16.3
+- เรียกใช้ MCP Server `heroui-v3-docs` สำหรับ Form Controls, Input Validation UI, และ Card Components
+
+
+สิ่งที่ต้องดำเนินการ:
+1. ติดตั้งและตั้งค่า Better Auth ใน `src/lib/auth.ts` โดยเชื่อมต่อกับ Prisma adapter
+   - รองรับ Credentials (Email/Password) และ Google OAuth (@kku.ac.th)
+   - เพิ่ม Custom User Fields: `role` (REQUESTER, STAFF, APPROVER, ADMIN) และ `department`
+2. สร้าง Route Handler สำหรับ Better Auth ใน `src/app/api/auth/[...all]/route.ts`
+3. สร้าง Middleware ป้องกัน Route ใน `src/middleware.ts`:
+   - `/admin/*` -> เฉพาะ ADMIN
+   - `/staff/*` -> เฉพาะ STAFF และ ADMIN
+   - `/approver/*` -> เฉพาะ APPROVER และ ADMIN
+   - `/dashboard/*` -> ทุก User ที่ authenticated แล้ว
+4. สร้าง Auth Helper Functions ใน `src/lib/auth-client.ts` สำหรับ Client Components
+5. สร้างหน้า UI Login / Register ใน `src/app/(auth)/login/page.tsx` โดยใช้ Component จาก HeroUI v3 ออกแบบด้วยธีมสีแสด/เทาเข้มประจำ มข.
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|คุณคือ Frontend UI/UX Engineer ช่วยสร้าง UI Shell และ Interactive Workflow Diagram
+
+[MCP DIRECTIVE]
+- เรียกใช้ MCP Server `heroui-v3-docs` เพื่อดึง Component Spec ของ `Navbar`, `Sidebar`, `Button`, `Modal`, `Chip`, และ `Tooltip` ใน HeroUI v3
+- ตรวจสอบรูปแบบ Tailwind CSS v4 Utility Classes ผ่าน MCP
+
+
+สิ่งที่ต้องดำเนินการ:
+1. สร้าง Global Layout ใน `src/app/(dashboard)/layout.tsx` โดยใช้ HeroUI v3:
+   - Navbar ด้านบน: โลโก้คณะสหวิทยาการ มข., ข้อมูลผู้ใช้, Badge แสดง Role, ปุ่ม Logout
+   - Sidebar ด้านข้าง เมนูหลัก:
+     - 💬 AI Consult (ปรึกษาความต้องการ)
+     - 📄 Quotation Inspector (ตรวจใบเสนอราคา)
+     - 📝 TOR Generator (ช่วยร่าง TOR)
+     - 📍 Request Tracking (ติดตามสถานะคำขอ)
+     - 📚 Regulation Hub (จัดการระเบียบพัสดุ - เฉพาะ Staff)
+     - 🛡️ Audit Log (เฉพาะ Admin)
+
+
+2. สร้าง Interactive Workflow Tracker Component ด้วย `@xyflow/react` ที่ `src/components/tracking/WorkflowDiagram.tsx`:
+   - แสดง Node ตาม 9 ขั้นตอนหลักใน PRD (บอกความต้องการ -> AI แยกข้อมูล -> RAG ค้นระเบียบ -> คำแนะนำ -> แนบใบเสนอราคา -> ตรวจความครบถ้วนและร่าง TOR -> เจ้าหน้าที่ตรวจทาน -> สร้างคำขอ -> ติดตามสถานะ)
+   - แต่ละ Node แสดงสถานะสีต่างกัน (Pending, In-Progress, Completed, Revision Needed)
+   - คลิกที่ Node เพื่อเปิด HeroUI Modal ดูรายละเอียดผู้รับผิดชอบ, SLA, และ Audit Log
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|try again
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|คุณคือ AI/LLM Integration Specialist ช่วยพัฒนาระบบ RAG สำหรับระเบียบพัสดุ และ OCR ตรวจใบเสนอราคาด้วย Google Gemini API (`@google/genai`)
+
+[MCP DIRECTIVE]
+- เรียกใช้ MCP Server `nextjs-docs` เพื่อสร้าง Server Actions และ Route Handlers แบบ Streaming ใน Next.js 16.3
+- เรียกใช้ MCP Server `prisma-mariadb` (ถ้ามี) เพื่อตรวจสอบประสิทธิภาพ Query Cosine Similarity Vector บน MariaDB
+
+
+สิ่งที่ต้องดำเนินการ:
+1. สร้าง RAG Engine Service ใน `src/lib/ai/rag.ts`:
+   - `generateEmbedding(text: string)` ใช้ `text-embedding-004`
+   - `searchRegulations(queryVector: number[], topK = 5)` คำนวณ Cosine Similarity บน `RegulationChunk` (คัดกรองฉบับที่ active และไม่หมดอายุ)
+   - `consultProcurement(userQuery: string, contextChunks: Chunk[])` ใช้ `gemini-2.5-flash` พร้อม System Instruction: บังคับระบุ Citation, ป้องกัน Prompt Injection, และตอบว่าไม่แน่ใจพร้อมส่งต่อเจ้าหน้าที่หากข้อมูลไม่พอ
+
+
+2. สร้าง OCR Inspection Service ใน `src/lib/ai/ocr.ts`:
+   - `extractQuotationData(fileBuffer: Buffer, mimeType: string)` ใช้ Gemini 2.5 Flash Vision อ่าน PDF/ภาพ ใบเสนอราคา
+   - Extract JSON: ชื่อผู้ขาย, เลขประจำตัวผู้เสียภาษี, วันที่, รายการสินค้า, ยอดรวมก่อนภาษี, VAT, ยอดสุทธิ, ระยะเวลายืนราคา
+   - ตรวจสอบความถูกต้องของตัวเลขและแจ้งเตือนข้อสงสัยการล็อกสเปก
+
+
+3. สร้าง API Routes:
+   - `POST /api/ai/consult`: รับคำถาม สนทนาตอบกลับพร้อม Citation และ Confidence Score
+   - `POST /api/ai/ocr`: อัปโหลดเอกสาร สกัดข้อมูล และคืนค่า JSON ให้ผู้ใช้ยืนยัน
+   - บันทึกประวัติการเรียกใช้ลง `AuditLog` ทุกครั้ง
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|try again
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|try again
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|คุณคือ Full-Stack Developer ช่วยพัฒนาหน้าจอหลัก 5 หน้าตามขอบเขต Hackathon MVP
+
+[MCP DIRECTIVE]
+- เรียกใช้ MCP Server `heroui-v3-docs` เพื่อดึง Component: `Table`, `Card`, `Form`, `Input`, `Select`, `Alert`, และ `Progress` มาสร้าง UI ทั้งหมด
+- เรียกใช้ MCP Server `nextjs-docs` เพื่อใช้งาน `useActionState` และ `useFormStatus` สำหรับ Next.js 16.3 Form Handling
+
+
+สิ่งที่ต้องดำเนินการ:
+1. **หน้าปรึกษาจัดซื้อจัดจ้าง (`src/app/(dashboard)/consult/page.tsx`)**:
+   - Chat Interface โต้ตอบกับ AI ถามข้อมูลเป็นขั้นตอน (วัตถุประสงค์, จำนวน, งบประมาณ, วันที่ใช้งาน)
+   - แสดงคำแนะนำประเภทการจัดหา เอกสารที่ต้องใช้ และ Citation อ้างอิงระเบียบที่มีลิงก์เปิดเอกสารจริง
+
+
+2. **หน้าตรวจใบเสนอราคา (`src/app/(dashboard)/quotation/page.tsx`)**:
+   - Component อัปโหลดไฟล์ PDF/JPG ใบเสนอราคา
+   - แสดงตาราง HeroUI Table เปรียบเทียบข้อมูล OCR ให้ผู้ใช้ยืนยัน/แก้ไขก่อนบันทึก
+   - Checklist ตรวจความครบถ้วนของเอกสาร
+
+
+3. **หน้าช่วยร่าง TOR (`src/app/(dashboard)/tor/page.tsx`)**:
+   - Form ดึงข้อมูลจากการปรึกษาและใบเสนอราคามาสร้างร่าง TOR
+   - HeroUI Alert แจ้งเตือนข้อความเสี่ยงล็อกสเปก (Lock-in Warning Alert)
+   - Export เอกสาร และ บันทึก Version History
+
+
+4. **หน้าติดตามสถานะคำขอ (`src/app/(dashboard)/requests/page.tsx`)**:
+   - แสดงรายการคำขอ พร้อม Component `WorkflowDiagram` (React Flow)
+   - Timeline แสดง SLA, ผู้รับผิดชอบปัจจุบัน และปุ่ม action สำหรับเจ้าหน้าที่พัสดุ
+
+
+5. **หน้าจัดการระเบียบพัสดุสำหรับเจ้าหน้าที่ (`src/app/(dashboard)/staff/regulations/page.tsx`)**:
+   - อัปโหลดระเบียบใหม่ (PDF), ตั้งค่าวันที่บังคับใช้, ระบบ Chunking อัตโนมัติ
+   - HeroUI Switch สลับสถานะฉบับ (Active/Superseded/Archived)
+
+
+ทุกหน้าต้องเชื่อมต่อกับ Server Actions/API Routes มี Loading State และ Toast Notifications จาก HeroUI
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|try again
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|try again
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|update prisma to v7 พร้อม config ให้พร้อมใช้งาน
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|ลองอีกที
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|ลองอีกทีครับ
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|ปรับปรุง .gitinore ให้ best practice
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|ช่วยออกแบบ ui/ux 
+layout sidebar navbar 
+เน้นความเป็นคณะสหวิทยาการ มข. 
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|ช่วยออกแบบ ui/ux 
+layout sidebar navbar 
+เน้นความเป็นคณะสหวิทยาการ มข. 
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|เขียน agent.md สำหรับให้ ai agent หน่อยครับ
+โดยเน้นภาษา nextjs + heroui v3 component เป็นหลัก​และใช้ให้มากที่สุด + prisma 
+ถ้าเป็นวันที่ให้เป็นรูปแบบ วันเดือนปี ภาษาไทย ปี พ.ศ. แต่เก็บในในฐานข้อมูลในรูปแบบ ค.ศ. ได้
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|ช่วยออกแบบ ui/ux layout sidebar navbar 
+เน้นความเป็นคณะสหวิทยาการ มข. 
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|ปรับปรุงตามที่แนะนำให้หน่อยครับ
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|คุณคือ Senior Frontend Developer โปรดสร้างหน้า Admin Dashboard (/app/admin/*) สำหรับระบบงานองค์กร โดยใช้ Next.js 16 (App Router), HeroUI v3 (@heroui/react), Tailwind CSS และ Lucide Icons (@lucide/react) โดยไม่ต้องอ้างอิงภาพตัวอย่าง ให้สร้างตามรายละเอียดเลย์เอาต์ ข้อความ และดีไซน์ที่ระบุด้านล่างนี้ทั้งหมด:
+
+### 1. Global Setup & Design System
+- **Font**: ภาษาไทย (ใช้ Prompt หรือ Kanit จาก `next/font/google`)
+- **Background Color**: สีเทาอ่อนมากๆ (`bg-slate-50` หรือ `#F8F9FA`)
+- **Primary Color**: สีแดงเลือดหมู/แดงเข้ม Crimson (`#8B0000` หรือ `bg-red-900`)
+- **Text Primary**: สีเทาเข้มเกือบดำ (`text-slate-800`)
+- **Text Muted**: สีเทาปานกลาง (`text-slate-500`)
+
+
+---
+
+
+### 2. Layout Structure & Components
+
+
+#### A. Top Navbar (`components/Navbar.tsx`)
+- ใช้ HeroUI `Navbar` ติดตั้งไว้ด้านบนสุด พื้นหลังสีขาว มีเส้นขอบล่างบางๆ
+- **โซนซ้าย**:
+  - โลโก้แบรนด์ "ISKKU" เป็นตัวอักษรสีแดงเข้มตัวหนา พร้อมไอคอนสัญลักษณ์สีแดง
+  - ข้อความกำกับระบบข้างโลโก้: "ระบบบริหารจัดการ" (ตัวหนา) และบรรทัดล่างเป็นข้อความขนาดเล็ก "คณะสหวิทยาการ มหาวิทยาลัยขอนแก่น"
+- **โซนขวา**:
+  - `Input` สำหรับค้นหา รูปทรงมน (Rounded-full) พร้อมไอคอน Search พิมพ์ว่า "ค้นหาในระบบ..."
+  - `Button` ไอคอนกระดิ่งแจ้งเตือน (Bell) มีจุด Red Badge ขนาดเล็กแจ้งเตือน
+  - `Dropdown` ส่วนโปรไฟล์ผู้ใช้งาน:
+    - **Trigger**: แสดง `Avatar` สีแดงเข้ม ตัวอักษรสีขาว "ผู้" ด้านข้างแสดงชื่อ "ผู้ดูแลระบบ Demo" และตำแหน่ง "ผู้ดูแลระบบ" พร้อมไอคอน Chevron Down
+    - **Menu Content**: เมื่อคลิกจะแสดงรายการ 3 ข้อ ได้แก่
+      1. "เมนูสำหรับเจ้าหน้าที่" (ไอคอน Settings)
+      2. "ข้อมูลส่วนตัว" (ไอคอน User)
+      3. "ออกจากระบบ" (ไอคอน LogOut สีแดง)
+
+
+#### B. Left Sidebar (`components/Sidebar.tsx`)
+- แถบเมนูด้านซ้าย ความกว้างประมาณ 260px พื้นหลังสีขาว
+- แบ่งเมนูออกเป็น 3 หมวดหมู่หลัก (จัดเรียงเป็นกลุ่มรายการพร้อมไอคอนหน้าเมนูและลูกศรขวาที่ท้ายเมนู):
+  1. **หมวด "ภาพรวม"**:
+     - เมนู "แดชบอร์ด" (*Active State*: พื้นหลังสีแดงอ่อน/ชมพูอ่อน ตัวอักษรสีแดงเข้ม มีแถบไฮไลต์สีแดง)
+     - เมนู "กิจกรรมล่าสุด"
+  2. **หมวด "ข้อมูลพื้นฐาน"**:
+     - เมนู "หน่วยงาน"
+     - เมนู "คลังความรู้ AI"
+     - เมนู "ตัวสร้างแบบฟอร์ม"
+     - เมนู "ตัวสร้าง Workflow"
+  3. **หมวด "ระบบ"**:
+     - เมนู "ข้อมูลผู้ใช้งานระบบ"
+     - เมนู "จัดการ RBAC"
+     - เมนู "ตั้งค่าระบบ"
+- **ด้านล่างสุดของ Sidebar**:
+  - `Card` กล่องข้อความช่วยเหลือสีครีมอ่อน หัวข้อ "ต้องการความช่วยเหลือ?" พร้อมสัญลักษณ์ไอคอนวงกลมมุมซ้ายล่าง
+
+
+#### C. Main Content Area (`app/dashboard/page.tsx`)
+พื้นที่ตรงกลางส่วนเนื้อหาหลัก วางเลย์เอาต์ดังนี้:
+
+
+1. **Page Header (ส่วนหัวแดชบอร์ด)**:
+   - บรรทัดแรก: Label ข้อความสีแดงเข้มขนาดเล็ก ตัวพิมพ์ใหญ่ "ADMINISTRATION CENTER"
+   - บรรทัดสอง: หัวข้อใหญ่ "ภาพรวมระบบ" (Heading Size XL/2XL ตัวหนา)
+   - บรรทัดสาม: Subtitle สีเทา "จัดการข้อมูลพื้นฐาน ผู้ใช้งาน และสิทธิ์การเข้าถึงของคณะสหวิทยาการ"
+   - ด้านขวาสุดของ Header: ข้อความบอกเวลา "อัปเดตล่าสุด 28 สิงหาคม 2569"
+
+
+2. **Stat Cards Section (การ์ดสรุปข้อมูล 3 กล่องเรียงแนวนอน)**:
+   - **Card 1 (ผู้ใช้งาน)**:
+     - ใช้ HeroUI `Card` พื้นหลังสีขาว มีเส้นขอบซ้ายหนาเน้นสีแดงเข้ม (`border-l-4 border-red-800`)
+     - มุมขวาบนมีไอคอน External Link (ลูกศรเฉียง)
+     - ไอคอนด้านซ้าย: รูปคน/ผู้ใช้ (Users) บนพื้นหลังวงกลมสีชมพูอ่อน
+     - หัวข้อ: "ผู้ใช้งานทั้งหมด" | ตัวเลขหลัก: "1,286" (ตัวหนาขนาดใหญ่) | คำอธิบายล่าง: "เพิ่มขึ้น 85% จากเดือนก่อน" (สีแดง)
+   - **Card 2 (หน่วยงาน)**:
+     - มีเส้นขอบซ้ายหนาเน้นสีส้ม/ทอง (`border-l-4 border-amber-500`)
+     - มุมขวาบนมีไอคอน External Link
+     - ไอคอนด้านซ้าย: รูปโฟลเดอร์/แฟ้มเอกสาร บนพื้นหลังวงกลมสีส้มอ่อน
+     - หัวข้อ: "หน่วยงานในระบบ" | ตัวเลขหลัก: "24" | คำอธิบายล่าง: "สังกัดหลักและหน่วยงานย่อย"
+   - **Card 3 (คำขอพิจารณา)**:
+     - มีเส้นขอบซ้ายหนาเน้นสีเทาเข้ม/น้ำเงินเทา (`border-l-4 border-slate-500`)
+     - มุมขวาบนมีไอคอน External Link
+     - ไอคอนด้านซ้าย: รูปนาฬิกา (Clock) บนพื้นหลังวงกลมสีเทาอ่อน
+     - หัวข้อ: "คำขอรอดำเนินการ" | ตัวเลขหลัก: "12" | คำอธิบายล่าง: "ต้องตรวจสอบภายในสัปดาห์นี้"
+
+
+3. **Hero Welcome Banner (การ์ดต้อนรับด้านล่าง)**:
+   - ใช้ HeroUI `Card` ขนาดใหญ่เต็มความกว้าง (Full Width)
+   - พื้นหลังการ์ดใช้สีครีมอ่อน/สีส้ม-แดงพาสเทลอ่อนมากๆ (`bg-[#FAF5F3]` หรือ `bg-orange-50/50`)
+   - เนื้อหาภายในฝั่งซ้าย:
+     - Text Label สีแดง: "SMART OFFICE CONTROL"
+     - Title: "ยินดีต้อนรับสู่ศูนย์จัดการระบบ" (ตัวหนา)
+     - Description: "เริ่มต้นจากเมนูด้านซ้ายเพื่อจัดการหน่วยงาน ผู้ใช้งาน และบทบาทสิทธิ์ให้สอดคล้องกับโครงสร้างของคณะ"
+   - เนื้อหาฝั่งขวา:
+     - วงกลมขนาดใหญ่สไตล์ Minimalist สีขาว/เทาอ่อน มีตัวอักษรย่อสีแดงเข้มเขียนว่า "IS" อยู่ตรงกลาง
+
+
+---
+
+
+### Technical Constraints
+- ใช้ React Server Components ในจุดที่ทำได้ และใส่ `'use client'` สำหรับส่วนที่มี Interactivity (เช่น Dropdown, Sidebar Active state)
+- เขียนโค้ดแยกเป็นไฟล์ Modular เช่น `Navbar.tsx`, `Sidebar.tsx`, `StatCard.tsx` และ `WelcomeBanner.tsx` เพื่อความสะอาดของโค้ด
+- ใช้ Tailwind CSS สำหรับ Styling และ Layout (Flex/Grid) ทั้งหมด
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|ลองอีกครั้ง
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|ปรับปรุงหน้าล็อกอินให้ใช้ logo ของคณะที่อยู่ในโฟลเดอร์ /public/Logo-ISKKU-transparent.png
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|ใส่ border หรือพื้นหลังให้ logo หน่อยเพราะมันกลึนกับพื้นหลังของส่วน login
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|สร้าง db:seed เพื่อให้สามารถล็อกอินเข้าได้ และสามารถ demo ต่อได้
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|## Error TypeConsole Error
+
+
+## Error Message
+In HTML, <button> cannot be a descendant of <button>.
+This will cause a hydration error.
+
+
+  ...
+    <header className="sticky top...">
+      <div>
+      <div className="flex items...">
+        <div>
+        <div>
+        <DropdownRoot>
+          <$49319ee1285aa241$export$27d2ad3c5815583e>
+            <$7230ffa83bc0c2cf$export$2881499e37b75b9a values={[...]}>
+              <DropdownTrigger>
+                <Button className={function} data-slot="dropdown-t...">
+                  <bound $7230ffa83bc0c2cf$var$DOMElement data-slot="dropdown-t..." className="dropdown__..." ...>
+>                   <button
+>                     data-slot="dropdown-trigger"
+>                     className="dropdown__trigger"
+>                     style={undefined}
+>                     data-rac=""
+>                     type="button"
+>                     disabled={undefined}
+>                     form={undefined}
+>                     formAction={undefined}
+>                     formEncType={undefined}
+>                     formMethod={undefined}
+>                     formNoValidate={undefined}
+>                     formTarget={undefined}
+>                     name={undefined}
+>                     value={undefined}
+>                     onFocus={function}
+>                     onBlur={function}
+>                     onKeyDown={function}
+>                     onKeyUp={function}
+>                     tabIndex={0}
+>                     aria-haspopup={true}
+>                     aria-expanded={false}
+>                     aria-controls={undefined}
+>                     id="react-aria-_R_1pknelb_"
+>                     onClick={function onClick}
+>                     onPointerDown={function}
+>                     onMouseDown={function}
+>                     onPointerUp={function}
+>                     onPointerEnter={function}
+>                     onPointerLeave={function}
+>                     onDragStart={function}
+>                     data-react-aria-pressable={true}
+>                     aria-pressed={undefined}
+>                     aria-current={undefined}
+>                     aria-disabled={undefined}
+>                     aria-labelledby={undefined}
+>                     slot={undefined}
+>                     data-disabled={undefined}
+>                     data-pressed={undefined}
+>                     data-hovered={undefined}
+>                     data-focused={undefined}
+>                     data-pending={undefined}
+>                     data-focus-visible={undefined}
+>                     ref={function}
+>                   >
+>                     <button
+>                       type="button"
+>                       className="flex items-center gap-2.5 rounded-full p-1 pr-2.5 hover:bg-slate-100 transition foc..."
+>                     >
+              ...
+
+
+
+
+
+
+    at button (unknown:0:0)
+    at Navbar (src/components/admin/Navbar.tsx:63:13)
+
+
+## Code Frame
+  61 |         <Dropdown>
+  62 |           <Dropdown.Trigger>
+> 63 |             <button
+     |             ^
+  64 |               type="button"
+  65 |               className="flex items-center gap-2.5 rounded-full p-1 pr-2.5 hover:bg-slate-100 transition focus:outline-none cursor-pointer"
+  66 |             >
+
+
+Next.js version: 16.3.3 (Turbopack)
+
+
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|# Implement AI Knowledge Base Ingestion, Vision OCR, Embeddings, and Retrieval
+
+ทำงานในโปรเจกต์ `/Users/pjatupon/Projects/protrack` เพื่อปรับปรุงระบบ **คลังความรู้ AI (RAG)** ให้พร้อมใช้งานจริง โดยพัฒนาต่อยอดจากโค้ดเดิม ห้ามสร้างระบบซ้ำหรือเปลี่ยน architecture โดยไม่จำเป็น
+
+
+## Technology and Source of Truth
+
+
+- Next.js 16 App Router, React 19, TypeScript strict
+- HeroUI v3, Tailwind CSS v4
+- Prisma 7 + MariaDB
+- Better Auth และ database-first RBAC
+- OpenRouter สำหรับ AI Vision/OCR และ Embedding
+- ใช้ `prisma/schema.prisma` เป็น source of truth
+- อ่านคู่มือ Next.js ที่ติดตั้งใน `node_modules/next/dist/docs/` ก่อนแก้ Next.js code
+
+
+ตรวจสอบไฟล์เหล่านี้ก่อนลงมือ:
+
+
+- `prisma/schema.prisma`
+- `app/admin/knowledge/page.tsx`
+- `app/admin/knowledge/actions.ts`
+- `app/admin/knowledge/knowledge-manager.tsx`
+- `libs/knowledge.ts`
+- `libs/knowledge-retrieval.ts`
+- `libs/knowledge-access.ts`
+- `libs/openRouterAI.ts`
+- `libs/prisma.ts`
+- `libs/rbac.ts`
+- `prisma/seed.ts`
+
+
+## Existing Database Design
+
+
+ใช้ model ที่มีอยู่:
+
+
+- `KnowledgeCategory`: หมวดหมู่ความรู้
+- `KnowledgeDocument`: metadata, สถานะ, checksum, extracted text และ embedding model
+- `KnowledgeChunk`: ข้อความแต่ละ chunk และ vector
+- `User`: ผู้ที่อัปโหลดเอกสาร
+
+
+สถานะเอกสาร:
+
+
+`PROCESSING | READY | FAILED | ARCHIVED`
+
+
+ประเภทเอกสาร:
+
+
+`REGULATION | EXAMPLE | WORKFLOW | OTHER`
+
+
+`KnowledgeChunk.embedding` เป็น `LongText` สำหรับเก็บ vector แบบ JSON array เพราะ MariaDB ที่ใช้อยู่ยังไม่ได้กำหนด native vector column ใน schema ห้ามเปลี่ยนเป็นชนิด native vector จนกว่าจะตรวจสอบ version และความสามารถของฐานข้อมูลจริง
+
+
+## Required Ingestion Pipeline
+
+
+สร้างหรือปรับปรุงฟังก์ชันให้ทำงานตามลำดับนี้:
+
+
+1. ตรวจ session และ RBAC ด้วย `requireKnowledgeAccess()`
+2. Validate title, category, document type และไฟล์
+3. รองรับ PDF, JPEG, PNG และ WebP ขนาดไม่เกิน 15 MB
+4. ตรวจชนิดไฟล์จาก magic bytes ห้ามเชื่อ MIME type หรือ extension จาก client
+5. สร้าง SHA-256 checksum และป้องกันไฟล์ซ้ำ
+6. บันทึก `KnowledgeDocument` ด้วยสถานะ `PROCESSING`
+7. ส่ง PDF หรือภาพให้ AI Vision/OCR ผ่าน OpenRouter
+8. สกัดข้อความภาษาเดิมโดยรักษาหัวข้อ ตาราง เลขข้อ ลำดับ และเลขหน้า
+9. ห้ามให้ AI สรุป เติม หรือแต่งข้อมูลจากเอกสาร
+10. Normalize ข้อความและแบ่งเป็น semantic chunks
+11. Chunk ต้องมี overlap ที่เหมาะสมและไม่ตัดกลางหัวข้อหรือข้อกำหนด
+12. เก็บ `pageNumber` และ `section` เมื่อระบุได้
+13. ส่ง chunks ไปสร้าง embeddings แบบ batch
+14. ตรวจจำนวน vector, dimensions และค่าตัวเลขทุกตัวก่อนบันทึก
+15. บันทึก chunks และ vector ใน Prisma transaction
+16. เก็บ vector ด้วย `JSON.stringify(vector)` ใน `KnowledgeChunk.embedding`
+17. บันทึก `embeddingModel`, `dimensions` และ `extractedText`
+18. เปลี่ยนสถานะเป็น `READY` เมื่อทุกขั้นตอนสำเร็จ
+19. หากล้มเหลวให้เปลี่ยนเป็น `FAILED` และบันทึกข้อความใน `processingNote`
+20. ห้ามปล่อยข้อมูล chunks บางส่วนค้างอยู่เมื่อ transaction ล้มเหลว
+
+
+แยก business logic ออกจาก Server Action เป็น server-only services ที่ทดสอบได้ เช่น:
+
+
+- `validateKnowledgeFile()`
+- `storeKnowledgeFile()`
+- `extractDocumentText()`
+- `chunkKnowledgeText()`
+- `generateEmbeddings()`
+- `processKnowledgeDocument()`
+- `retryKnowledgeDocument()`
+- `retrieveKnowledge()`
+
+
+Server Action ควรทำเพียง authorization, input parsing, เรียก service และ `revalidatePath`
+
+
+## AI Vision and OpenRouter
+
+
+ใช้ configuration เดิมจาก `libs/openRouterAI.ts` และระบบ AI settings ที่มีอยู่ ห้าม hard-code API key
+
+
+ต้องรองรับ:
+
+
+- PDF ผ่าน OpenRouter file input และ file-parser/OCR ที่รองรับ
+- JPEG, PNG, WebP ผ่าน `image_url` แบบ data URL
+- `temperature: 0`
+- Prompt ภาษาไทยที่กำชับให้ถอดข้อความเท่านั้น
+- timeout ด้วย `AbortController`
+- HTTP error, malformed response, rate limit และ empty content
+- ข้อความ error สำหรับผู้ใช้ต้องอ่านเข้าใจได้ แต่ห้ามเปิดเผย API key หรือ response ที่ sensitive
+- จำกัดจำนวนหน้า/token และแจ้งข้อผิดพลาดเมื่อเอกสารใหญ่เกินความสามารถ
+
+
+Environment ที่ต้องใช้หรือรองรับ:
+
+
+- `OPENROUTER_API_KEY`
+- `OPENROUTER_API_URL`
+- `OPENROUTER_MODEL`
+- `OPENROUTER_EMBEDDING_MODEL`
+
+
+ห้าม log API key, base64 file หรือข้อความเอกสารทั้งหมด
+
+
+## File Storage
+
+
+สร้างชื่อไฟล์ด้วย UUID และเก็บ original filename เฉพาะ metadata ป้องกัน path traversal ทุกจุด
+
+
+ถ้าใช้ `public/media/rag` ตามระบบเดิม ต้องตรวจ path ด้วย `path.resolve()` ก่อนอ่านหรือลบ อย่างไรก็ตามเอกสารองค์กรไม่ควรถูกเปิดแบบ public โดยไม่มี authorization หากทำได้โดยไม่ขยาย scope มากเกินไป ให้ย้ายไป private storage และสร้าง protected download route ที่ตรวจ session/RBAC ก่อนส่งไฟล์
+
+
+เมื่อ DB create ล้มเหลวต้องลบไฟล์ที่เพิ่งเขียน และเมื่อลบเอกสารให้จัดการไฟล์กับ DB อย่างปลอดภัยโดยใช้ quarantine/restore pattern เดิม
+
+
+## Vector Retrieval
+
+
+ปรับปรุง `retrieveKnowledge(query, limit)` ให้:
+
+
+- Validate และจำกัดความยาว query
+- สร้าง query embedding ด้วย model เดียวกับ document chunks
+- เลือกเฉพาะ document สถานะ `READY`
+- ไม่ใช้ document สถานะ `ARCHIVED`, `FAILED` หรือ `PROCESSING`
+- เลือกเฉพาะ category ที่ active
+- ตรวจ dimensions และ embedding model ให้ตรงกัน
+- Parse JSON vector อย่างปลอดภัย
+- คำนวณ cosine similarity
+- กำหนด similarity threshold จาก config
+- จำกัดจำนวนผลลัพธ์และคืน source metadata
+- คืน `documentTitle`, `categoryName`, `documentType`, `pageNumber`, `section`, `content`, `similarity` และ authorized file URL
+- ป้องกันการโหลดทุก vector จาก DB จน memory สูงเกินไป เช่น candidate limit, pagination หรือแนวทางที่เหมาะกับ MariaDB ปัจจุบัน
+- หาก MariaDB รองรับ native vector อย่างยืนยันได้ ให้เสนอแผน migration แยกต่างหากก่อน ห้ามเปลี่ยน schema โดยพลการ
+
+
+## Retry, Archive, Delete, and Reindex
+
+
+- Retry ต้องอ่านไฟล์เดิม ประมวลผลใหม่ และแทนที่ chunks ใน transaction
+- Archive ต้องทำให้ retrieval หยุดใช้เอกสาร แต่ยังเก็บไฟล์และ vector
+- Restore ต้องนำเอกสารกลับมาใช้โดยไม่สร้าง vector ใหม่หากข้อมูลยังสมบูรณ์
+- Delete ต้องมี confirmation และลบ `KnowledgeChunk` ผ่าน cascade
+- Reindex ต้องสร้าง embeddings ใหม่เมื่อ embedding model เปลี่ยน
+- ป้องกัน concurrent processing เอกสารเดียวกัน
+- การ retry/reindex ล้มเหลวต้องไม่ทำลาย vector ชุดเดิมที่ยังใช้งานได้
+
+
+## UI Requirements
+
+
+ปรับหน้า `/admin/knowledge` ด้วย HeroUI v3 ตามรูปแบบเดิม:
+
+
+- จัดการหมวดหมู่
+- อัปโหลดเอกสาร
+- แสดงชื่อไฟล์ ขนาด ประเภท หมวดหมู่ ผู้สร้าง และวันที่
+- แสดงสถานะ processing/ready/failed/archived
+- แสดงจำนวน chunks, embedding model และ dimensions
+- มี loading, empty, success และ error states
+- มีปุ่ม retry, archive, restore และ delete
+- Delete ต้องมี confirmation popover/dialog
+- รองรับ keyboard, screen reader, responsive layout และภาษาไทย
+- ห้ามใช้ HeroUI v2 API
+
+
+อย่าทำ AI processing ปลอมด้วย progress percentage หาก backend ไม่มี progress จริง ให้แสดง indeterminate processing state
+
+
+## Security and Data Integrity
+
+
+- ทุก mutation และ download route ต้องตรวจ authentication และ RBAC ฝั่ง server
+- ห้ามพึ่งการซ่อนปุ่มใน UI เป็น authorization
+- Validate FormData ฝั่ง server
+- ป้องกัน path traversal, MIME spoofing, duplicate file และ oversized upload
+- ตรวจ ownership/organization scope หาก schema หรือ authorization กำหนด
+- ใช้ Prisma transaction สำหรับการเปลี่ยน document และ chunks
+- เพิ่ม AuditEvent สำหรับ upload, processing success/failure, retry, archive, restore และ delete หากเข้ากับ audit pattern เดิม
+- ห้ามแก้ generated Prisma Client โดยตรง
+
+
+## Tests
+
+
+เพิ่ม focused tests อย่างน้อยสำหรับ:
+
+
+- magic-byte validation
+- file-size validation
+- duplicate checksum
+- text chunking และ overlap
+- malformed embedding
+- vector dimensions ไม่ตรงกัน
+- cosine similarity และ result ordering
+- ไม่ retrieve archived/failed documents
+- ingestion success
+- AI/OCR failure เปลี่ยนสถานะเป็น `FAILED`
+- transaction rollback
+- unauthorized access
+- path traversal protection
+
+
+Mock OpenRouter request ใน tests ห้ามเรียก AI API จริง
+
+
+## Validation
+
+
+หลังแก้ไขให้รัน:
+
+
+```bash
+npx prisma validate --schema schema.prisma
+npx prisma generate --schema schema.prisma
+npx tsc --noEmit --pretty false
+npm test
+npm run build
+git diff --check
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|# Implement AI Knowledge Base Ingestion, Vision OCR, Embeddings, and Retrieval
+
+ทำงานในโปรเจกต์ `/Users/pjatupon/Projects/protrack` เพื่อปรับปรุงระบบ **คลังความรู้ AI (RAG)** ให้พร้อมใช้งานจริง โดยพัฒนาต่อยอดจากโค้ดเดิม ห้ามสร้างระบบซ้ำหรือเปลี่ยน architecture โดยไม่จำเป็น
+
+
+## Technology and Source of Truth
+
+
+- Next.js 16 App Router, React 19, TypeScript strict
+- HeroUI v3, Tailwind CSS v4
+- Prisma 7 + MariaDB
+- Better Auth และ database-first RBAC
+- OpenRouter สำหรับ AI Vision/OCR และ Embedding
+- ใช้ `prisma/schema.prisma` เป็น source of truth
+- อ่านคู่มือ Next.js ที่ติดตั้งใน `node_modules/next/dist/docs/` ก่อนแก้ Next.js code
+
+
+ตรวจสอบไฟล์เหล่านี้ก่อนลงมือ:
+
+
+- `prisma/schema.prisma`
+- `app/admin/knowledge/page.tsx`
+- `app/admin/knowledge/actions.ts`
+- `app/admin/knowledge/knowledge-manager.tsx`
+- `libs/knowledge.ts`
+- `libs/knowledge-retrieval.ts`
+- `libs/knowledge-access.ts`
+- `libs/openRouterAI.ts`
+- `libs/prisma.ts`
+- `libs/rbac.ts`
+- `prisma/seed.ts`
+
+
+## Existing Database Design
+
+
+ใช้ model ที่มีอยู่:
+
+
+- `KnowledgeCategory`: หมวดหมู่ความรู้
+- `KnowledgeDocument`: metadata, สถานะ, checksum, extracted text และ embedding model
+- `KnowledgeChunk`: ข้อความแต่ละ chunk และ vector
+- `User`: ผู้ที่อัปโหลดเอกสาร
+
+
+สถานะเอกสาร:
+
+
+`PROCESSING | READY | FAILED | ARCHIVED`
+
+
+ประเภทเอกสาร:
+
+
+`REGULATION | EXAMPLE | WORKFLOW | OTHER`
+
+
+`KnowledgeChunk.embedding` เป็น `LongText` สำหรับเก็บ vector แบบ JSON array เพราะ MariaDB ที่ใช้อยู่ยังไม่ได้กำหนด native vector column ใน schema ห้ามเปลี่ยนเป็นชนิด native vector จนกว่าจะตรวจสอบ version และความสามารถของฐานข้อมูลจริง
+
+
+## Required Ingestion Pipeline
+
+
+สร้างหรือปรับปรุงฟังก์ชันให้ทำงานตามลำดับนี้:
+
+
+1. ตรวจ session และ RBAC ด้วย `requireKnowledgeAccess()`
+2. Validate title, category, document type และไฟล์
+3. รองรับ PDF, JPEG, PNG และ WebP ขนาดไม่เกิน 15 MB
+4. ตรวจชนิดไฟล์จาก magic bytes ห้ามเชื่อ MIME type หรือ extension จาก client
+5. สร้าง SHA-256 checksum และป้องกันไฟล์ซ้ำ
+6. บันทึก `KnowledgeDocument` ด้วยสถานะ `PROCESSING`
+7. ส่ง PDF หรือภาพให้ AI Vision/OCR ผ่าน OpenRouter
+8. สกัดข้อความภาษาเดิมโดยรักษาหัวข้อ ตาราง เลขข้อ ลำดับ และเลขหน้า
+9. ห้ามให้ AI สรุป เติม หรือแต่งข้อมูลจากเอกสาร
+10. Normalize ข้อความและแบ่งเป็น semantic chunks
+11. Chunk ต้องมี overlap ที่เหมาะสมและไม่ตัดกลางหัวข้อหรือข้อกำหนด
+12. เก็บ `pageNumber` และ `section` เมื่อระบุได้
+13. ส่ง chunks ไปสร้าง embeddings แบบ batch
+14. ตรวจจำนวน vector, dimensions และค่าตัวเลขทุกตัวก่อนบันทึก
+15. บันทึก chunks และ vector ใน Prisma transaction
+16. เก็บ vector ด้วย `JSON.stringify(vector)` ใน `KnowledgeChunk.embedding`
+17. บันทึก `embeddingModel`, `dimensions` และ `extractedText`
+18. เปลี่ยนสถานะเป็น `READY` เมื่อทุกขั้นตอนสำเร็จ
+19. หากล้มเหลวให้เปลี่ยนเป็น `FAILED` และบันทึกข้อความใน `processingNote`
+20. ห้ามปล่อยข้อมูล chunks บางส่วนค้างอยู่เมื่อ transaction ล้มเหลว
+
+
+แยก business logic ออกจาก Server Action เป็น server-only services ที่ทดสอบได้ เช่น:
+
+
+- `validateKnowledgeFile()`
+- `storeKnowledgeFile()`
+- `extractDocumentText()`
+- `chunkKnowledgeText()`
+- `generateEmbeddings()`
+- `processKnowledgeDocument()`
+- `retryKnowledgeDocument()`
+- `retrieveKnowledge()`
+
+
+Server Action ควรทำเพียง authorization, input parsing, เรียก service และ `revalidatePath`
+
+
+## AI Vision and OpenRouter
+
+
+ใช้ configuration เดิมจาก `libs/openRouterAI.ts` และระบบ AI settings ที่มีอยู่ ห้าม hard-code API key
+
+
+ต้องรองรับ:
+
+
+- PDF ผ่าน OpenRouter file input และ file-parser/OCR ที่รองรับ
+- JPEG, PNG, WebP ผ่าน `image_url` แบบ data URL
+- `temperature: 0`
+- Prompt ภาษาไทยที่กำชับให้ถอดข้อความเท่านั้น
+- timeout ด้วย `AbortController`
+- HTTP error, malformed response, rate limit และ empty content
+- ข้อความ error สำหรับผู้ใช้ต้องอ่านเข้าใจได้ แต่ห้ามเปิดเผย API key หรือ response ที่ sensitive
+- จำกัดจำนวนหน้า/token และแจ้งข้อผิดพลาดเมื่อเอกสารใหญ่เกินความสามารถ
+
+
+Environment ที่ต้องใช้หรือรองรับ:
+
+
+- `OPENROUTER_API_KEY`
+- `OPENROUTER_API_URL`
+- `OPENROUTER_MODEL`
+- `OPENROUTER_EMBEDDING_MODEL`
+
+
+ห้าม log API key, base64 file หรือข้อความเอกสารทั้งหมด
+
+
+## File Storage
+
+
+สร้างชื่อไฟล์ด้วย UUID และเก็บ original filename เฉพาะ metadata ป้องกัน path traversal ทุกจุด
+
+
+ถ้าใช้ `public/media/rag` ตามระบบเดิม ต้องตรวจ path ด้วย `path.resolve()` ก่อนอ่านหรือลบ อย่างไรก็ตามเอกสารองค์กรไม่ควรถูกเปิดแบบ public โดยไม่มี authorization หากทำได้โดยไม่ขยาย scope มากเกินไป ให้ย้ายไป private storage และสร้าง protected download route ที่ตรวจ session/RBAC ก่อนส่งไฟล์
+
+
+เมื่อ DB create ล้มเหลวต้องลบไฟล์ที่เพิ่งเขียน และเมื่อลบเอกสารให้จัดการไฟล์กับ DB อย่างปลอดภัยโดยใช้ quarantine/restore pattern เดิม
+
+
+## Vector Retrieval
+
+
+ปรับปรุง `retrieveKnowledge(query, limit)` ให้:
+
+
+- Validate และจำกัดความยาว query
+- สร้าง query embedding ด้วย model เดียวกับ document chunks
+- เลือกเฉพาะ document สถานะ `READY`
+- ไม่ใช้ document สถานะ `ARCHIVED`, `FAILED` หรือ `PROCESSING`
+- เลือกเฉพาะ category ที่ active
+- ตรวจ dimensions และ embedding model ให้ตรงกัน
+- Parse JSON vector อย่างปลอดภัย
+- คำนวณ cosine similarity
+- กำหนด similarity threshold จาก config
+- จำกัดจำนวนผลลัพธ์และคืน source metadata
+- คืน `documentTitle`, `categoryName`, `documentType`, `pageNumber`, `section`, `content`, `similarity` และ authorized file URL
+- ป้องกันการโหลดทุก vector จาก DB จน memory สูงเกินไป เช่น candidate limit, pagination หรือแนวทางที่เหมาะกับ MariaDB ปัจจุบัน
+- หาก MariaDB รองรับ native vector อย่างยืนยันได้ ให้เสนอแผน migration แยกต่างหากก่อน ห้ามเปลี่ยน schema โดยพลการ
+
+
+## Retry, Archive, Delete, and Reindex
+
+
+- Retry ต้องอ่านไฟล์เดิม ประมวลผลใหม่ และแทนที่ chunks ใน transaction
+- Archive ต้องทำให้ retrieval หยุดใช้เอกสาร แต่ยังเก็บไฟล์และ vector
+- Restore ต้องนำเอกสารกลับมาใช้โดยไม่สร้าง vector ใหม่หากข้อมูลยังสมบูรณ์
+- Delete ต้องมี confirmation และลบ `KnowledgeChunk` ผ่าน cascade
+- Reindex ต้องสร้าง embeddings ใหม่เมื่อ embedding model เปลี่ยน
+- ป้องกัน concurrent processing เอกสารเดียวกัน
+- การ retry/reindex ล้มเหลวต้องไม่ทำลาย vector ชุดเดิมที่ยังใช้งานได้
+
+
+## UI Requirements
+
+
+ปรับหน้า `/admin/knowledge` ด้วย HeroUI v3 ตามรูปแบบเดิม:
+
+
+- จัดการหมวดหมู่
+- อัปโหลดเอกสาร
+- แสดงชื่อไฟล์ ขนาด ประเภท หมวดหมู่ ผู้สร้าง และวันที่
+- แสดงสถานะ processing/ready/failed/archived
+- แสดงจำนวน chunks, embedding model และ dimensions
+- มี loading, empty, success และ error states
+- มีปุ่ม retry, archive, restore และ delete
+- Delete ต้องมี confirmation popover/dialog
+- รองรับ keyboard, screen reader, responsive layout และภาษาไทย
+- ห้ามใช้ HeroUI v2 API
+
+
+อย่าทำ AI processing ปลอมด้วย progress percentage หาก backend ไม่มี progress จริง ให้แสดง indeterminate processing state
+
+
+## Security and Data Integrity
+
+
+- ทุก mutation และ download route ต้องตรวจ authentication และ RBAC ฝั่ง server
+- ห้ามพึ่งการซ่อนปุ่มใน UI เป็น authorization
+- Validate FormData ฝั่ง server
+- ป้องกัน path traversal, MIME spoofing, duplicate file และ oversized upload
+- ตรวจ ownership/organization scope หาก schema หรือ authorization กำหนด
+- ใช้ Prisma transaction สำหรับการเปลี่ยน document และ chunks
+- เพิ่ม AuditEvent สำหรับ upload, processing success/failure, retry, archive, restore และ delete หากเข้ากับ audit pattern เดิม
+- ห้ามแก้ generated Prisma Client โดยตรง
+
+
+## Tests
+
+
+เพิ่ม focused tests อย่างน้อยสำหรับ:
+
+
+- magic-byte validation
+- file-size validation
+- duplicate checksum
+- text chunking และ overlap
+- malformed embedding
+- vector dimensions ไม่ตรงกัน
+- cosine similarity และ result ordering
+- ไม่ retrieve archived/failed documents
+- ingestion success
+- AI/OCR failure เปลี่ยนสถานะเป็น `FAILED`
+- transaction rollback
+- unauthorized access
+- path traversal protection
+
+
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|1. ให้สอดคล้องกับโปรแกรมนี้
+2. ยังไม่มีไฟล์เหล่านั้น
+3. ทำให้ครบทั้งหมดในรอบเดียว
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|ลองอีกที
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|พัฒนาระบบนี้นะครับ
+/Project/isprotract/* ตรงนี้นะ
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|พัฒนาระบบนี้นะครับ/Project/isprotrack/* ตรงนี้นะ
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|พัฒนาระบบนี้นะครับ/Project/isprotrack/* ตรงนี้นะ
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|ทำต่อให้หน่อย
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|/admin/knowledge-base การเพิ่ม แก้ไข หมวดหมู่ ไฟล์ความรู้ ให้ทำแบบ modal component โดยใช้ heroui v3 component
+
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|ทำต่อ
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|อยากได้ layout navbar sidebar ของผู้ใช้ทั่วไปหรือบุคลากร /app/ เหมือนของ admin /app/admin/
+
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|หน้าแรก http://localhost:3000/ ยังไม่เห็นเปลี่ยนแปลงเลย หรือต้อง ล็อกอินก่อน
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|เปลี่ยนหน้าแรก landing page ให้เป็นหน้าแรกสำหรับบุคคลากร หรือผู้ใช้งานเลยครับ
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|หมวดหมู่ความรู้ อยากใหเพิ่ม แก้ไข ลบ อยู่ใน modal component  ให้คลิกแล้วเปิด modal นี้ขึ้นมาจัดการ
+โดยให้เหลือแค่อัดโหลดเอกสารและรายการเอกสารความรู้
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|อีกครั้ง
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|เมื่อคลิกเปิด modal ในหน้าจอคลังความรู้ AI แล้วเปิดไม่ได้ขึ้นแต่ tranparency แต่ไม่ปรากฏ modal เลย
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|ยังเปิด modal ไม่ได้ครับ
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|ยังเปิด modal ไม่ได้ครับ ดูเหมือนจะเป็นทั้ง project เลย
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|ลองอีกที
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|ลองอีกที
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|modal จัดการหมวดหมู่ความรู้ ความกว้างน้อยไป ไม่พอดีกับเนื้อหา
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|ลองอีกครั้ง
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|ลองอีกครั้ง
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|เพิ่มชื่อระบบไว้ที่ navbar ข้างโลโก้คณะ 
+"ระบบติดตามและบริหารการจัดซื้อจัดจ้างอัจฉริยะ ของคณะสหวิทยาการ"
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|เพิ่มฟอนส์ให้ใหญ่ขึ้นอีก ตัวเล็กไป มองไม่เห็น
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|เพิ่มภาษาอังกฤษ I-Smart ProTrack
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|modal อัปโหลดเอกสารเข้าสู่คลังความรู้ 
+กรณ๊ที่ผู้ใช้ไม่พิมพ์ชื่อเอกสาร ก็ให้ใช้ชื่อไฟล์เป็นชื่อเอกสารแทน
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|ชื่อไฟล์กับหมวดหมู่อยู่คนละบรรทัด และย้ายปุ่มเลือกไฟล์ไว้บนสุด
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|ชื่อเอกสาร กับ หมวดหมู่ อยู๋คนละแถว
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|ไฟล์เอกสาร ทำให้ใหญ่ขึ้น ทำให้เป็นพื้นที่สำหรับวางไฟล์หรือเลือกไฟล์ได้
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|2026-08-29T16:22:57.637Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret2026-08-29T16:22:58.043Z WARN [Better Auth]: Social provider google is missing clientId or clientSecret
+
+ตัดออกก่อน ไม่ได้ใช้ครับ
+
+และ่ในหน้าจอล็อกอินให้เพิ่ม ปุ่มคลิก username เพื่อให้ล็อกอินเข้าได้เลย โดยที่ไม่ต้องพิมพ์ username password เพื่อให้สามารถ demo ได้ง่าย และรวดเร็ว
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|admin เมื่อล้ฮกอินแล้วให้ redirect ไปหน้า /admin/ 
+รวมถึงพัสดุ การเงินด้วย ยกเว้นผู้ขอจัดซื้อจัดจ้าง
+=== Session: เริ่มต้นโปรเจกต์ Next.js 16.3 ระบบจัดซื้อจัดจ้าง smart (2026-08-29 15:36:32) ===|ไม่ได้บังคับเข้า /admin/ ตลอด แค่ให้ redirect หลังจากล้่อกอินเท้านั้น 
+แต่แอดมินก็ยังกลับหน้าแรกได้เหมือนผู้ขอใช้ เพราะบางครั้งแอดมินก็ต้องขอจัดซื้อจัดจ้างด้วย
+=== Session: Explore protrack knowledge base architecture (@explore subagent) (2026-08-29 17:35:53) ===|Explore the codebase at /Users/pjatupon/Projects/protrack very thoroughly. This is a Next.js 16 App Router + Prisma 7 + MariaDB + Better Auth project. I need a comprehensive report on the existing "Knowledge Base" / RAG (Retrieval Augmented Generation) system so I can extend it without duplicating work or breaking architecture.
+
+Please read and report on ALL of the following files in full (read entire file contents, not just summaries):
+
+1. `prisma/schema.prisma` - Full schema, especially models: KnowledgeCategory, KnowledgeDocument, KnowledgeChunk, User, AuditEvent (or similar audit model), and any enums like DocumentStatus, DocumentType. Also note relations, indexes, and any existing vector-related fields.
+2. `app/admin/knowledge/page.tsx`
+3. `app/admin/knowledge/actions.ts`
+4. `app/admin/knowledge/knowledge-manager.tsx`
+5. `libs/knowledge.ts`
+6. `libs/knowledge-retrieval.ts`
+7. `libs/knowledge-access.ts`
+8. `libs/openRouterAI.ts`
+9. `libs/prisma.ts`
+10. `libs/rbac.ts`
+11. `prisma/seed.ts`
+12. `AGENTS.md` (root) - read fully, this likely contains project conventions
+13. `package.json` - full dependency list and scripts
+14. `tsconfig.json`
+15. `next.config.mjs`
+16. `proxy.ts` (this project's middleware equivalent)
+17. `prisma.config.ts`
+
+Also explore and report on:
+- Directory structure of `libs/`, `app/admin/`, `tests/`, `storage/`, `public/media/rag` (if exists) — use `ls -la` recursively where relevant
+- Any existing test files under `tests/` related to knowledge/RAG — read their full content
+- Check if there's an existing AI settings/config system (search for "AISettings", "openRouterAI", "OPENROUTER" across the codebase)
+- Search for any existing file upload / storage utility functions (grep for "multer", "formidable", "writeFile", "path.resolve", "uuid")
+- Search for any existing audit logging pattern (grep for "AuditEvent", "auditLog", "createAuditEvent")
+- Check how Better Auth session/RBAC is checked in other server actions (find 2-3 examples elsewhere in the codebase, e.g. under app/admin/*/actions.ts)
+- Check the Node.js and package versions of: next, react, prisma, @prisma/client, better-auth, any AI/openrouter SDK, any testing framework (vitest/jest), zod
+- Check if there's an existing embedding/vector similarity utility function anywhere (grep "cosineSimilarity", "embedding")
+- Check .env.example or .env (do not print secret VALUES, just list which keys exist, e.g. OPENROUTER_API_KEY=<hidden>)
+- Check `public/media/rag` directory contents/structure if it exists, and any existing file storage under `storage/`
+
+For each file, note:
+- Full relevant code content (paste key sections, especially function signatures, types, and Prisma models)
+- What's already implemented vs what's stubbed/missing
+- Any TODOs or comments indicating incomplete work
+
+Report back with:
+1. The complete Prisma schema sections for Knowledge* models and enums (verbatim)
+2. Current implementation status of the ingestion pipeline (what exists, what's missing) with file:line references
+3. Current RBAC/session pattern used in this codebase (verbatim code example)
+4. Current AI/OpenRouter client implementation (verbatim)
+5. Current file storage pattern (verbatim)
+6. Current retrieval/embedding logic if any (verbatim)
+7. Test framework setup and any existing knowledge-related tests (verbatim)
+8. Full package.json dependencies and scripts
+9. Any relevant AGENTS.md conventions (verbatim, especially about coding style, testing, security)
+10. Directory tree of libs/, app/admin/knowledge/, tests/, storage/, public/media/rag
+
+Be thorough and exhaustive — this report will be the sole source of truth for a large implementation task, so do not skip or truncate important code.
+=== Session: ตั้งค่า AI automation ผ่าน lib genai.ts (2026-08-29 18:32:53) ===|สำหรับการใช้งาน ai automate ให้ตั้งค่า ตามคู่มือ
+
+curl https://gen.ai.kku.ac.th/api/v1/chat/completions \  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {API_KEY}" \
+  -d '{
+        "model": "gemini-2.5-flash-lite",
+        "messages": [
+          {"role": "system", "content": "You are a helpful assistant."},
+          {"role": "user", "content": "What is the meaning of life?"}
+        ],
+        "stream": false
+      }'
+
+กำหนด api key ไว้ใน .env และอย่า push ขึ้น github
+สร้างไฟล์ lib กลางไว้ เช่น /lib/genai.ts
+มีตัวอย่างประมาณนี้
+"use server";
+
+
+import { prisma } from "@/libs/prisma";
+import {
+    AI_SETTING_NAMES,
+    DEFAULT_OPENROUTER_EMBEDDING_MODEL,
+    DEFAULT_OPENROUTER_BASE_URL,
+    DEFAULT_OPENROUTER_MODEL,
+    LEGACY_OPENROUTER_SETTING_NAMES,
+    resolveChatCompletionsUrl,
+    resolveEmbeddingsUrl,
+} from "@/libs/ai-settings";
+
+
+interface AIGenerationOptions {
+    model?: string;
+    temperature?: number;
+    maxTokens?: number;
+}
+
+
+interface AIImageGenerationOptions extends AIGenerationOptions {
+    mimeType?: string;
+}
+
+
+type AIDocumentInput = {
+    base64: string;
+    filename: string;
+    mimeType: string;
+};
+
+
+const AI_REQUEST_TIMEOUT_MS = 120_000;
+
+
+async function fetchWithTimeout(url: string, init: RequestInit, timeoutMs: number = AI_REQUEST_TIMEOUT_MS): Promise<Response> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        return await fetch(url, { ...init, signal: controller.signal });
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+
+function isAbortError(error: unknown): boolean {
+    return error instanceof Error && (error.name === "AbortError" || error.message.includes("aborted"));
+}
+
+
+export type EmbeddingBatch = {
+    model: string;
+    vectors: number[][];
+};
+
+
+async function getRuntimeAiSettings() {
+    const settingNames = [
+        ...Object.values(AI_SETTING_NAMES),
+        ...Object.values(LEGACY_OPENROUTER_SETTING_NAMES),
+    ];
+    const settings = await prisma.setting.findMany({
+        where: {
+            name: {
+                in: settingNames,
+            },
+        },
+    });
+
+
+    const settingMap = new Map(settings.map((item) => [item.name, item.value?.trim() ?? ""]));
+
+
+    const apiKey =
+        settingMap.get(AI_SETTING_NAMES.apiKey) ||
+        settingMap.get(LEGACY_OPENROUTER_SETTING_NAMES.apiKey) ||
+        process.env.OPENROUTER_API_KEY ||
+        process.env.OPENAI_API_KEY ||
+        "";
+
+
+    const model =
+        settingMap.get(AI_SETTING_NAMES.model) ||
+        settingMap.get(LEGACY_OPENROUTER_SETTING_NAMES.model) ||
+        process.env.OPENROUTER_MODEL ||
+        DEFAULT_OPENROUTER_MODEL;
+    const baseUrl =
+        settingMap.get(AI_SETTING_NAMES.baseUrl) ||
+        settingMap.get(LEGACY_OPENROUTER_SETTING_NAMES.apiUrl) ||
+        process.env.OPENROUTER_API_URL ||
+        process.env.OPENAI_API_URL ||
+        DEFAULT_OPENROUTER_BASE_URL;
+
+
+    return { apiKey, model, apiUrl: resolveChatCompletionsUrl(baseUrl) };
+}
+
+
+async function getResolvedAiSettings() {
+    const settings = await getRuntimeAiSettings();
+
+
+    if (!settings.apiKey) {
+        console.error("OpenRouter API key is missing. Please set OPENROUTER_API_KEY in tbl_setting or environment.");
+        throw new Error("API Key not configured");
+    }
+
+
+    return settings;
+}
+
+
+function getBaseHeaders(apiKey: string) {
+    return {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'http://10.153.51.253:3000',
+        'X-Title': 'Training Registration System',
+    };
+}
+
+
+async function parseOpenRouterResponse(response: Response) {
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error(`OpenRouter API error: ${response.status}`, errorData);
+
+
+        if (response.status === 401) {
+            throw new Error('Invalid API Key - please check OPENROUTER_API_KEY or OPENAI_API_KEY');
+        } else if (response.status === 403) {
+            const message = errorData?.error?.message || '';
+            if (message.includes('limit exceeded') || message.includes('Key limit')) {
+                throw new Error('OpenRouter key limit exceeded - please check your quota or billing');
+            }
+            throw new Error('OpenRouter API access denied - please check your key permissions');
+        } else if (response.status === 429) {
+            throw new Error('Rate limit exceeded - please try again later');
+        } else if (response.status === 500) {
+            throw new Error('OpenRouter API server error - please try again later');
+        }
+
+
+        throw new Error(`OpenRouter API error: ${response.status} ${response.statusText}`);
+    }
+
+
+    const data = await response.json();
+
+
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+        console.error('Unexpected API response format:', data);
+        throw new Error('Invalid response format from AI API');
+    }
+
+
+    const content = data.choices[0].message.content;
+
+
+    if (!content) {
+        throw new Error('AI returned empty response');
+    }
+
+
+    return content;
+}
+
+
+function extractJsonObject(text: string): string {
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+
+
+    if (start === -1 || end === -1 || start >= end) {
+        throw new Error('AI did not return valid JSON');
+    }
+
+
+    return text.slice(start, end + 1);
+}
+
+
+export async function generateText(
+    prompt: string,
+    options: AIGenerationOptions = {}
+): Promise<string> {
+    const settings = await getResolvedAiSettings();
+    const { apiKey, model: defaultModel, apiUrl } = settings;
+
+
+    const {
+        model = defaultModel,
+        temperature = 0.7,
+        maxTokens = 2000,
+    } = options;
+
+
+    try {
+        const response = await fetchWithTimeout(apiUrl, {
+            method: 'POST',
+            headers: getBaseHeaders(apiKey),
+            body: JSON.stringify({
+                model: model,
+                messages: [
+                    {
+                        role: 'user',
+                        content: prompt,
+                    },
+                ],
+                temperature: temperature,
+                max_tokens: maxTokens,
+            }),
+        });
+
+
+        return await parseOpenRouterResponse(response);
+    } catch (error) {
+        if (isAbortError(error)) {
+            throw new Error('AI ตอบสนองช้าเกินไป กรุณาลองใหม่อีกครั้ง');
+        }
+
+
+        console.error('AI Generation Error:', error);
+        
+        if (error instanceof Error) {
+            if (error.message.includes('fetch failed')) {
+                throw new Error('Network error - unable to connect to AI service');
+            }
+            throw error;
+        }
+        
+        throw new Error('An unexpected error occurred during AI generation');
+    }
+}
+
+
+export async function generateTextWithRetry(
+    prompt: string,
+    options: AIGenerationOptions = {},
+    maxRetries: number = 2
+): Promise<string> {
+    let lastError: Error | null = null;
+    
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            return await generateText(prompt, options);
+        } catch (error) {
+            lastError = error instanceof Error ? error : new Error(String(error));
+            
+            if (
+                lastError.message.includes('Invalid API Key') ||
+                lastError.message.includes('Invalid response format')
+            ) {
+                throw lastError;
+            }
+            
+            if (attempt < maxRetries) {
+                const delayMs = Math.pow(2, attempt) * 1000;
+                await new Promise(resolve => setTimeout(resolve, delayMs));
+            }
+        }
+    }
+    
+    throw lastError || new Error('Failed to generate text after retries');
+}
+
+
+export async function generateThaiContent(
+    basePrompt: string,
+    context: Record<string, string> = {}
+): Promise<string> {
+    const contextStr = Object.entries(context)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join('\n');
+
+
+    const thaiPrompt = `
+${basePrompt}
+
+
+${contextStr ? `ข้อมูลเพิ่มเติม:\n${contextStr}` : ''}
+
+
+โปรดตอบเป็นภาษาไทยราชการ กระชับและชัดเจน
+    `.trim();
+
+
+    return generateTextWithRetry(thaiPrompt, {
+        temperature: 0.7,
+        maxTokens: 1500,
+    });
+}
+
+
+export async function translateThaiToEnglish(
+    thaiText: string
+): Promise<string> {
+    const prompt = `
+Please translate the following Thai text to English. Maintain the professional tone and structure:
+
+
+Thai text:
+${thaiText}
+
+
+Please provide only the English translation without any additional explanation.
+    `.trim();
+
+
+    return generateTextWithRetry(prompt, {
+        temperature: 0.3,
+        maxTokens: 1500,
+    });
+}
+
+
+export async function generateJsonFromImage<T>(
+    prompt: string,
+    imageBase64: string,
+    options: AIImageGenerationOptions = {}
+): Promise<T> {
+    const settings = await getResolvedAiSettings();
+    const { apiKey, model: defaultModel, apiUrl } = settings;
+    const {
+        model = defaultModel,
+        temperature = 0.1,
+        maxTokens = 1200,
+        mimeType = 'image/jpeg',
+    } = options;
+
+
+    try {
+        const response = await fetchWithTimeout(settings.apiUrl, {
+            method: 'POST',
+            headers: getBaseHeaders(apiKey),
+            body: JSON.stringify({
+                model,
+                messages: [
+                    {
+                        role: 'user',
+                        content: [
+                            { type: 'text', text: prompt },
+                            {
+                                type: 'image_url',
+                                image_url: {
+                                    url: `data:${mimeType};base64,${imageBase64}`,
+                                },
+                            },
+                        ],
+                    },
+                ],
+                temperature,
+                max_tokens: maxTokens,
+            }),
+        });
+
+
+        const content = await parseOpenRouterResponse(response);
+        const jsonText = extractJsonObject(content);
+
+
+        return JSON.parse(jsonText) as T;
+    } catch (error) {
+        if (isAbortError(error)) {
+            throw new Error('AI ตอบสนองช้าเกินไป กรุณาลองใหม่อีกครั้ง');
+        }
+
+
+        console.error('AI Image Generation Error:', error);
+
+
+        if (error instanceof Error) {
+            throw error;
+        }
+
+
+        throw new Error('An unexpected error occurred during image extraction');
+    }
+}
+
+
+export async function extractTextFromDocument(input: AIDocumentInput): Promise<string> {
+    const settings = await getResolvedAiSettings();
+    const dataUrl = `data:${input.mimeType};base64,${input.base64}`;
+    const documentContent = input.mimeType === "application/pdf"
+        ? { type: "file", file: { filename: input.filename, file_data: dataUrl } }
+        : { type: "image_url", image_url: { url: dataUrl } };
+    const response = await fetchWithTimeout(settings.apiUrl, {
+        method: "POST",
+        headers: getBaseHeaders(settings.apiKey),
+        body: JSON.stringify({
+            model: settings.model,
+            messages: [{
+                role: "user",
+                content: [
+                    {
+                        type: "text",
+                        text: "สกัดข้อความทั้งหมดจากเอกสารนี้เป็นภาษาเดิม รักษาหัวข้อ เลขข้อ ตาราง ลำดับขั้นตอน และเลขหน้าเท่าที่ระบุได้ ตอบเฉพาะข้อความเอกสารในรูปแบบ Markdown ห้ามสรุป ห้ามเติมข้อมูล และให้ระบุ [หน้า N] เมื่อเปลี่ยนหน้า",
+                    },
+                    documentContent,
+                ],
+            }],
+            ...(input.mimeType === "application/pdf" ? {
+                plugins: [{ id: "file-parser", pdf: { engine: "mistral-ocr" } }],
+            } : {}),
+            temperature: 0,
+            max_tokens: 12000,
+        }),
+    });
+
+
+    return parseOpenRouterResponse(response);
+}
+
+
+export async function generateEmbeddings(input: string[]): Promise<EmbeddingBatch> {
+    if (!input.length) {
+        return { model: DEFAULT_OPENROUTER_EMBEDDING_MODEL, vectors: [] };
+    }
+
+
+    const settings = await getResolvedAiSettings();
+    const model = process.env.OPENROUTER_EMBEDDING_MODEL || DEFAULT_OPENROUTER_EMBEDDING_MODEL;
+    const response = await fetchWithTimeout(resolveEmbeddingsUrl(settings.apiUrl), {
+        method: "POST",
+        headers: getBaseHeaders(settings.apiKey),
+        body: JSON.stringify({ model, input, encoding_format: "float" }),
+    });
+
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error(`OpenRouter embedding error: ${response.status}`, errorData);
+        throw new Error(`ไม่สามารถสร้าง vector ได้ (${response.status})`);
+    }
+
+
+    const data = await response.json() as {
+        data?: Array<{ embedding?: number[]; index?: number }>;
+        model?: string;
+    };
+    const vectors = [...(data.data ?? [])]
+        .sort((left, right) => (left.index ?? 0) - (right.index ?? 0))
+        .map((item) => item.embedding)
+        .filter((embedding): embedding is number[] => Array.isArray(embedding));
+
+
+    if (vectors.length !== input.length) {
+        throw new Error("AI ส่ง vector กลับมาไม่ครบถ้วน");
+    }
+
+
+    const dimensions = vectors[0]?.length ?? 0;
+    const isValid = dimensions > 0 && vectors.every(
+        (vector) => vector.length === dimensions && vector.every((value) => typeof value === "number" && Number.isFinite(value)),
+    );
+    if (!isValid) {
+        throw new Error("AI ส่ง vector ที่ไม่ถูกต้อง (ขนาดหรือค่าผิดปกติ)");
+    }
+
+
+    return { model: data.model || model, vectors };
+}
+=== Session: ตั้งค่า AI automation ผ่าน lib genai.ts (2026-08-29 18:32:53) ===|ทำให้คลิกปุ่ม ออกจากระบบ ที่อยู่ใน navbar ทำงาน ออกจากระบบ 
+=== Session: ตั้งค่า AI automation ผ่าน lib genai.ts (2026-08-29 18:32:53) ===|ปรับปรุงใช้ โลโก้คณะสหวิทยาการ บน navbar /public/Logo-ISKKU-transparent.png ในทุก ๆ สิทธิ์ผู้ใช้
+=== Session: ตั้งค่า AI automation ผ่าน lib genai.ts (2026-08-29 18:32:53) ===|ตรวจสอบฟังก์ชั่นการประมวลผลด้วย AI ให้หน่อยว่ายังขาดอะไร
+=== Session: ตั้งค่า AI automation ผ่าน lib genai.ts (2026-08-29 18:32:53) ===|ปรับปรุงแก้ไขให้ใช้งานได้หน่อย
+
+พร้อมทั้งมีเมนูให้แอดมินสามารถ จัดการ ตั้งค่าการใช้งาน ai ได้เช่น กำหนด base_url api_key model และบันทึกลง db และเรียกใช้งานจาก ai ได้
+=== Session: ตั้งค่า AI automation ผ่าน lib genai.ts (2026-08-29 18:32:53) ===|## Error TypeConsole Error
+
+
+## Error Message
+ForwardRef(bound $7230ffa83bc0c2cf$var$DOMElement) contains an input of type url with both value and defaultValue props. Input elements must be either controlled or uncontrolled (specify either the value prop, or the defaultValue prop, but not both). Decide between using a controlled or uncontrolled input element and remove one of these props. More info: https://react.dev/link/controlled-components
+
+
+
+
+    at input (unknown:0:0)
+    at AiSettingsForm (src/app/admin/ai-settings/AiSettingsForm.tsx:70:15)
+
+
+## Code Frame
+  68 |                 <FiLink /> Base URL
+  69 |               </Label>
+> 70 |               <Input
+     |               ^
+  71 |                 type="url"
+  72 |                 placeholder="https://gen.ai.kku.ac.th/api/v1"
+  73 |                 defaultValue={initialBaseUrl}
+
+
+Next.js version: 16.3.3 (Turbopack)
+
+
+=== Session: ตั้งค่า AI automation ผ่าน lib genai.ts (2026-08-29 18:32:53) ===|curl https://gen.ai.kku.ac.th/api/v1/chat/completions \  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {API_KEY}" \
+  -d '{
+        "model": "gemini-2.5-flash-lite",
+        "messages": [
+          {"role": "system", "content": "You are a helpful assistant."},
+          {"role": "user", "content": "What is the meaning of life?"}
+        ],
+        "stream": false
+      }'
+
+error
+
+AI Generation Error: Error: Invalid API Key - please check AI settings
+    at parseChatResponse (src/lib/genai.ts:81:13)
+    at async generateText (src/lib/genai.ts:154:12)
+    at async testAiConnectionAction (src/app/admin/ai-settings/actions.ts:80:20)
+  79 |
+  80 |     if (response.status === 401) {
+> 81 |       throw new Error("Invalid API Key - please check AI settings");
+     |             ^
+  82 |     } else if (response.status === 403) {
+  83 |       throw new Error("AI API access denied - please check your key permissions");
+  84 |     } else if (response.status === 429) {
+ POST /admin/ai-settings 200 in 503ms (next.js: 4ms, proxy.ts: 14ms, application-code: 484ms)
+  └─ ƒ testAiConnectionAction() in 477ms
+=== Session: ตั้งค่า AI automation ผ่าน lib genai.ts (2026-08-29 18:32:53) ===|ลองอีกที
+=== Session: ตั้งค่า AI automation ผ่าน lib genai.ts (2026-08-29 18:32:53) ===|ลองอีกที
+=== Session: ตั้งค่า AI automation ผ่าน lib genai.ts (2026-08-29 18:32:53) ===| POST /admin/ai-settings 200 in 75ms (next.js: 6ms, proxy.ts: 14ms, application-code: 56ms)  └─ ƒ saveAiSettingsAction(null, {}) in 16ms src/app/admin/ai-settings/actions.ts
+AI Generation Error: Error: AI returned empty response
+    at parseChatResponse (src/lib/genai.ts:111:11)
+    at async generateText (src/lib/genai.ts:162:12)
+    at async testAiConnectionAction (src/app/admin/ai-settings/actions.ts:80:20)
+  109 |
+  110 |   if (!content) {
+> 111 |     throw new Error("AI returned empty response");
+      |           ^
+  112 |   }
+  113 |
+  114 |   return content;
+ POST /admin/ai-settings 200 in 3.6
+=== Session: ตั้งค่า AI automation ผ่าน lib genai.ts (2026-08-29 18:32:53) ===|ปุ่มลบ เอกสารในคลังความรู้ อยากให้มี popover heroui v3 เพื่อ ยืนยันการลบ
+=== Session: ตั้งค่า AI automation ผ่าน lib genai.ts (2026-08-29 18:32:53) ===|popover กว้างเกินไปให้ตัดข้อความภายใน wrap
+=== Session: ตั้งค่า AI automation ผ่าน lib genai.ts (2026-08-29 18:32:53) ===|คลิกปุ่มแก้ไข รูปดินสอแล้วเกิด error และเพิ่ม tooltip อธิบายแต่ละปุ่ม ในคอลัมจัดการ
+=== Session: ตั้งค่า AI automation ผ่าน lib genai.ts (2026-08-29 18:32:53) ===|เพิ่มหน้าจอสำหรับแอดมินจัดการข้อมูลผู้ใช้ และข้อมูล RBAC 
+ให้สามารถ เพิ่ม ลบ แก้ไข ได้ 
+มี modal component ด้วยนะ
+=== Session: ตั้งค่า AI automation ผ่าน lib genai.ts (2026-08-29 18:32:53) ===|tool tip ปุ่มจัดการ ยังแสดงผลไม่ถูกต้อง
+=== Session: ตั้งค่า AI automation ผ่าน lib genai.ts (2026-08-29 18:32:53) ===|modal อัปโหลดเอกสารเข้าสู่คลังความรู้ 
+ต้องการให้สะกัดข้อทมูลและบันทึกข้อมูลความรู้ vector ลงฐานข้อมูลได้ถึงจะอัพโหลดไฟล์ไว้ที่ /public/media/ เพื่อให้ผู้ใช้เปิดดูเอกสารอ้างอิงได้
+=== Session: ตั้งค่า AI automation ผ่าน lib genai.ts (2026-08-29 18:32:53) ===|✓ Compiled in 132msUnexpected API response format: {}
+AI Image Generation Error: Error: Invalid response format from AI API
+    at parseChatResponse (src/lib/genai.ts:105:11)
+    at async generateJsonFromImage (src/lib/genai.ts:295:21)
+    at async Object.extractDocumentText [as extractText] (src/lib/ai/document.ts:29:18)
+    at async prepareDocumentKnowledge (src/lib/knowledge/pipeline.ts:34:36)
+    at async processKnowledgeDocument (src/lib/knowledge/pipeline.ts:79:46)
+    at async uploadKnowledgeDocument (src/app/admin/knowledge-base/actions.ts:152:9)
+  103 |   if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+  104 |     console.error("Unexpected API response format:", data);
+> 105 |     throw new Error("Invalid response format from AI API");
+      |           ^
+  106 |   }
+  107 |
+  108 |   const message = data.choices[0].message;
+ POST /admin/knowledge-base 200 in 34.3s (next.js: 
+=== Session: ตั้งค่า AI automation ผ่าน lib genai.ts (2026-08-29 18:32:53) ===|คุณคือ Senior Full-Stack Developer ช่วยพัฒนาและปรับปรุง UI/Logic ใน 3 หน้าจอหลักของระบบจัดซื้อจัดจ้าง คณะสหวิทยาการ มหาวิทยาลัยขอนแก่น เพื่อแก้ปัญหาเจ้าหน้าที่พัสดุมีจำกัดเพียง 3 คน, ระบบ ERP ไม่เสถียร, บุคลากรไม่มีความรู้จัดทำ TOR และปัญหาเอกสารถูกส่งกลับแก้ไขหลายรอบ
+
+[MCP DIRECTIVE]
+- เรียกใช้ MCP Server `heroui-v3-docs` สำหรับ Component: `Form`, `Input`, `Select`, `Card`, `Table`, `Modal`, `Accordion`, `Chip`, `Alert`, `Progress`, `Tooltip`, `Badge`, `Stepper`
+- เรียกใช้ MCP Server `nextjs-docs` เพื่อจัดการ Dynamic Server Actions, Optimistic UI Updates และ File Streaming ใน Next.js 16.3
+
+
+---
+
+
+### 1. เพิ่ม Schema คลังแบบฟอร์มเอกสาร (`prisma/schema.prisma`)
+สร้าง Table `FormTemplate` เพื่อจัดการไฟล์แบบฟอร์มมาตรฐาน `.docx` ในคลังความรู้ AI RAG:
+
+
+```prisma
+model FormTemplate {
+  id           String   @id @default(cuid())
+  fileName     String   // เช่น "from ขอจัดซื้อครุภัณฑ์ (วงเงินไม่เกิน 100,000 บาท).docx"
+  category     String   // วัสดุ, ครุภัณฑ์, จ้างบริการ/จ้างเหมา, จ้างซ่อมทรัพย์สิน, เบิก/คืน/เคลื่อนย้าย
+  budgetMin    Float    @default(0)
+  budgetMax    Float?   // null หมายถึงไม่จำกัดวงเงิน
+  filePath     String   // Storage URL หรือ Path
+  placeholders Json     // รายการ Field ตัวแปร เช่น ["requesterName", "department", "reason", "itemDetails", "totalBudget"]
+  createdAt    DateTime @default(now())
+}
+
+2. ระบบ Auto Form Selection & Docx Generator Service (src/lib/ai/form-router.ts)
+Auto Form Selection Logic: นำบริบทการสนทนา (ประเภทพัสดุ + วงเงิน) ไปจับคู่กับไฟล์แบบฟอร์ม .docx ใน FormTemplate อัตโนมัติ:
+ขอจัดซื้อวัสดุ: แยกกรณี วงเงินไม่เกิน 100,000 บาท vs วงเงินเกิน 100,000 บาท
+ขอจัดซื้อครุภัณฑ์: แยกกรณี วงเงินไม่เกิน 100,000 บาท vs วงเงินเกิน 100,000 บาท
+ขอจ้างงานบริการ/งานเหมาบริการ: แยกกรณี วงเงินไม่เกิน 100,000 บาท vs วงเงินเกิน 100,000 บาท
+กรณีเฉพาะ: ขอจ้างซ่อมทรัพย์สิน, ใบขอเบิกวัสดุ, ใบเบิกครุภัณฑ์, ขอแจ้งเคลื่อนย้ายครุภัณฑ์, ขอส่งคืนพัสดุชำรุด
+Data Auto-Fill & Docx Generation: ใช้ docxtemplater และ pizzip นำข้อมูลที่สกัดจากแชต Pre-fill ลงในแบบฟอร์มเว็บ และสร้างไฟล์ .docx ที่เติมข้อมูลครบถ้วนให้ผู้ใช้ดาวน์โหลด
+
+Markdown
+คุณคือ Senior Full-Stack Developer ช่วยพัฒนาและปรับปรุง UI/Logic ใน 3 หน้าจอหลักของระบบจัดซื้อจัดจ้าง คณะสหวิทยาการ มหาวิทยาลัยขอนแก่น เพื่อแก้ปัญหาเจ้าหน้าที่พัสดุมีจำกัดเพียง 3 คน, ระบบ ERP ไม่เสถียร, บุคลากรไม่มีความรู้จัดทำ TOR และปัญหาเอกสารถูกส่งกลับแก้ไขหลายรอบ
+
+
+[MCP DIRECTIVE]
+- เรียกใช้ MCP Server `heroui-v3-docs` สำหรับ Component: `Form`, `Input`, `Select`, `Card`, `Table`, `Modal`, `Accordion`, `Chip`, `Alert`, `Progress`, `Tooltip`, `Badge`, `Stepper`
+- เรียกใช้ MCP Server `nextjs-docs` เพื่อจัดการ Dynamic Server Actions, Optimistic UI Updates และ File Streaming ใน Next.js 16.3
+
+
+---
+
+
+### 1. เพิ่ม Schema คลังแบบฟอร์มเอกสาร (`prisma/schema.prisma`)
+สร้าง Table `FormTemplate` เพื่อจัดการไฟล์แบบฟอร์มมาตรฐาน `.docx` ในคลังความรู้ AI RAG:
+
+
+```prisma
+model FormTemplate {
+  id           String   @id @default(cuid())
+  fileName     String   // เช่น "from ขอจัดซื้อครุภัณฑ์ (วงเงินไม่เกิน 100,000 บาท).docx"
+  category     String   // วัสดุ, ครุภัณฑ์, จ้างบริการ/จ้างเหมา, จ้างซ่อมทรัพย์สิน, เบิก/คืน/เคลื่อนย้าย
+  budgetMin    Float    @default(0)
+  budgetMax    Float?   // null หมายถึงไม่จำกัดวงเงิน
+  filePath     String   // Storage URL หรือ Path
+  placeholders Json     // รายการ Field ตัวแปร เช่น ["requesterName", "department", "reason", "itemDetails", "totalBudget"]
+  createdAt    DateTime @default(now())
+}
+2. ระบบ Auto Form Selection & Docx Generator Service (src/lib/ai/form-router.ts)
+Auto Form Selection Logic: นำบริบทการสนทนา (ประเภทพัสดุ + วงเงิน) ไปจับคู่กับไฟล์แบบฟอร์ม .docx ใน FormTemplate อัตโนมัติ:
+ขอจัดซื้อวัสดุ: แยกกรณี วงเงินไม่เกิน 100,000 บาท vs วงเงินเกิน 100,000 บาท
+ขอจัดซื้อครุภัณฑ์: แยกกรณี วงเงินไม่เกิน 100,000 บาท vs วงเงินเกิน 100,000 บาท
+ขอจ้างงานบริการ/งานเหมาบริการ: แยกกรณี วงเงินไม่เกิน 100,000 บาท vs วงเงินเกิน 100,000 บาท
+กรณีเฉพาะ: ขอจ้างซ่อมทรัพย์สิน, ใบขอเบิกวัสดุ, ใบเบิกครุภัณฑ์, ขอแจ้งเคลื่อนย้ายครุภัณฑ์, ขอส่งคืนพัสดุชำรุด
+Data Auto-Fill & Docx Generation: ใช้ docxtemplater และ pizzip นำข้อมูลที่สกัดจากแชต Pre-fill ลงในแบบฟอร์มเว็บ และสร้างไฟล์ .docx ที่เติมข้อมูลครบถ้วนให้ผู้ใช้ดาวน์โหลด
+3. ปรับปรุงหน้าปรึกษาจัดซื้อจัดจ้าง (src/app/(dashboard)/consult/page.tsx)
+เป้าหมาย: ลดภาระเจ้าหน้าที่ 3 คน แก้ปัญหาผู้ขอซื้อไม่รู้กระบวนการ และเลือกแบบฟอร์มให้อัตโนมัติ
+Interactive Guidance Chat: สนทนาภาษาเข้าใจง่ายโดยไม่ใช้ศัพท์พัสดุซับซ้อน สกัดข้อมูล วัตถุประสงค์, รายการ, วงเงิน, และวันที่ต้องใช้งาน
+Dynamic SLA Lead-Time Calculator: คำนวณระยะเวลากระบวนการจัดซื้อจัดจ้างตามประเภทงานให้อัตโนมัติ เพื่อลดการทักสอบถามเจ้าหน้าที่:
+แบบจำเพาะเจาะจง (วงเงินเล็กน้อย): ~3 วันทำการ
+จ้างเหมาบริการ / จ้างงาน: ~อย่างน้อย 7 วันทำการ
+จัดซื้อครุภัณฑ์: ~อย่างน้อย 1 เดือน
+งานสิ่งก่อสร้าง / ปรับปรุง: ~อย่างน้อย 1-2 เดือน
+หากวันใช้งานจริงน้อยกว่า SLA ระบบจะขึ้น Alert เตือนความเสี่ยงจัดซื้อไม่ทันแผนงาน
+Visual Process Roadmap: แสดง Mini Timeline สรุปขั้นตอนตั้งแต่ต้นจนจบ เพื่อให้ติดตามสถานะได้เองโดยไม่ต้องทักถามเจ้าหน้าที่
+Form Router & Auto-Filler UI:
+เมื่อคุยจบ AI แสดง Card แนะนำแบบฟอร์ม .docx ที่ต้องใช้
+แสดง HeroUI Form พร้อม Pre-fill ข้อมูลจากการแชตให้ทันที
+ปุ่ม "ดาวน์โหลดเอกสาร (.docx)" ที่เติมข้อมูลเรียบร้อย
+ปุ่ม "ส่งคำขอไปยังเจ้าหน้าที่พัสดุ" สร้าง Request ในระบบพร้อมแนบไฟล์
+
+4. ปรับปรุงหน้าตรวจใบเสนอราคา (src/app/(dashboard)/quotation/page.tsx)
+เป้าหมาย: ลดการส่งกลับเอกสารแก้ไขหลายรอบ และช่วยให้ได้ราคาที่ดีที่สุด
+Multi-Vendor Price Comparison Table: อัปโหลดใบเสนอราคาหลายใบ (PDF/JPG) เพื่อเปรียบเทียบในตารางโครงสร้างเดียวกัน (ราคา, ยืนราคา, เงื่อนไขส่งมอบ)
+Completeness Checklist: สแกนตรวจสอบความครบถ้วนของเอกสารผ่าน HeroUI Accordion/Chip:
+[ ] เลขประจำตัวผู้เสียภาษี / ชื่อผู้ขาย
+[ ] กำหนดยืนราคาตามระเบียบ
+[ ] ยอดรวมภาษี VAT 7% และการคำนวณถูกต้อง
+[ ] คุณลักษณะไม่ระบุยี่ห้อเฉพาะเจาะจง
+Pre-Lock-in Detection Alert: AI ตรวจสอบยี่ห้อ/รุ่นในใบเสนอราคา หากเสี่ยงล็อกสเปก ให้แสดง HeroUI Alert เตือนผู้ใช้ทันทีก่อนส่งให้เจ้าหน้าที่
+
+5. ปรับปรุงหน้าช่วยร่าง TOR (src/app/(dashboard)/tor/page.tsx)
+เป้าหมาย: แก้ปัญหาบุคลากรเขียน TOR ไม่เป็น สเปกกำกวม หรือเสี่ยงถูกร้องเรียนเรื่องล็อกสเปก
+Smart TOR Wizard Template: สร้างร่าง TOR อัตโนมัติจากข้อมูลที่ยืนยันแล้ว แบ่งตามประเภทงาน (ครุภัณฑ์ / จ้างเหมา / สิ่งก่อสร้าง / จำเพาะเจาะจง)
+Real-Time Lock-In & Ambiguity Checker:
+Highlight สีแดง: คำที่เสี่ยงล็อกสเปก (ระบุยี่ห้อ/รุ่น หรือสเปกที่มีผู้ขายรายเดียว)
+Highlight สีเหลือง: ข้อความกำกวม เช่น "คุณภาพดีมาก", "มาตรฐานสูง" ที่ไม่มีตัวชี้วัด
+แนะนำคำแก้ไขที่ถูกต้องตามระเบียบพัสดุ
+Version Control & Export: บันทึกประวัติการแก้ไขทุกเวอร์ชัน และ Export เป็น PDF/DOCX รูปแบบมาตรฐานส่งให้เจ้าหน้าที่พัสดุตรวจรับรอง
+=== Session: ตั้งค่า AI automation ผ่าน lib genai.ts (2026-08-29 18:32:53) ===|คุณคือ Senior Full-Stack Developer ช่วยพัฒนาและปรับปรุง UI/Logic ใน 3 หน้าจอหลักของระบบจัดซื้อจัดจ้าง คณะสหวิทยาการ มหาวิทยาลัยขอนแก่น เพื่อแก้ปัญหาเจ้าหน้าที่พัสดุมีจำกัดเพียง 3 คน, ระบบ ERP ไม่เสถียร, บุคลากรไม่มีความรู้จัดทำ TOR และปัญหาเอกสารถูกส่งกลับแก้ไขหลายรอบ
+
+[MCP DIRECTIVE]
+- เรียกใช้ MCP Server `heroui-v3-docs` สำหรับ Component: `Form`, `Input`, `Select`, `Card`, `Table`, `Modal`, `Accordion`, `Chip`, `Alert`, `Progress`, `Tooltip`, `Badge`, `Stepper`
+- เรียกใช้ MCP Server `nextjs-docs` เพื่อจัดการ Dynamic Server Actions, Optimistic UI Updates และ File Streaming ใน Next.js 16.3
+
+
+---
+
+
+### 1. เพิ่ม Schema คลังแบบฟอร์มเอกสาร (`prisma/schema.prisma`)
+สร้าง Table `FormTemplate` เพื่อจัดการไฟล์แบบฟอร์มมาตรฐาน `.docx` ในคลังความรู้ AI RAG:
+
+
+```prisma
+model FormTemplate {
+  id           String   @id @default(cuid())
+  fileName     String   // เช่น "from ขอจัดซื้อครุภัณฑ์ (วงเงินไม่เกิน 100,000 บาท).docx"
+  category     String   // วัสดุ, ครุภัณฑ์, จ้างบริการ/จ้างเหมา, จ้างซ่อมทรัพย์สิน, เบิก/คืน/เคลื่อนย้าย
+  budgetMin    Float    @default(0)
+  budgetMax    Float?   // null หมายถึงไม่จำกัดวงเงิน
+  filePath     String   // Storage URL หรือ Path
+  placeholders Json     // รายการ Field ตัวแปร เช่น ["requesterName", "department", "reason", "itemDetails", "totalBudget"]
+  createdAt    DateTime @default(now())
+}
+
+2. ระบบ Auto Form Selection & Docx Generator Service (src/lib/ai/form-router.ts)
+Auto Form Selection Logic: นำบริบทการสนทนา (ประเภทพัสดุ + วงเงิน) ไปจับคู่กับไฟล์แบบฟอร์ม .docx ใน FormTemplate อัตโนมัติ:
+ขอจัดซื้อวัสดุ: แยกกรณี วงเงินไม่เกิน 100,000 บาท vs วงเงินเกิน 100,000 บาท
+ขอจัดซื้อครุภัณฑ์: แยกกรณี วงเงินไม่เกิน 100,000 บาท vs วงเงินเกิน 100,000 บาท
+ขอจ้างงานบริการ/งานเหมาบริการ: แยกกรณี วงเงินไม่เกิน 100,000 บาท vs วงเงินเกิน 100,000 บาท
+กรณีเฉพาะ: ขอจ้างซ่อมทรัพย์สิน, ใบขอเบิกวัสดุ, ใบเบิกครุภัณฑ์, ขอแจ้งเคลื่อนย้ายครุภัณฑ์, ขอส่งคืนพัสดุชำรุด
+Data Auto-Fill & Docx Generation: ใช้ docxtemplater และ pizzip นำข้อมูลที่สกัดจากแชต Pre-fill ลงในแบบฟอร์มเว็บ และสร้างไฟล์ .docx ที่เติมข้อมูลครบถ้วนให้ผู้ใช้ดาวน์โหลด
+
+Markdown
+คุณคือ Senior Full-Stack Developer ช่วยพัฒนาและปรับปรุง UI/Logic ใน 3 หน้าจอหลักของระบบจัดซื้อจัดจ้าง คณะสหวิทยาการ มหาวิทยาลัยขอนแก่น เพื่อแก้ปัญหาเจ้าหน้าที่พัสดุมีจำกัดเพียง 3 คน, ระบบ ERP ไม่เสถียร, บุคลากรไม่มีความรู้จัดทำ TOR และปัญหาเอกสารถูกส่งกลับแก้ไขหลายรอบ
+
+
+[MCP DIRECTIVE]
+- เรียกใช้ MCP Server `heroui-v3-docs` สำหรับ Component: `Form`, `Input`, `Select`, `Card`, `Table`, `Modal`, `Accordion`, `Chip`, `Alert`, `Progress`, `Tooltip`, `Badge`, `Stepper`
+- เรียกใช้ MCP Server `nextjs-docs` เพื่อจัดการ Dynamic Server Actions, Optimistic UI Updates และ File Streaming ใน Next.js 16.3
+
+
+---
+
+
+### 1. เพิ่ม Schema คลังแบบฟอร์มเอกสาร (`prisma/schema.prisma`)
+สร้าง Table `FormTemplate` เพื่อจัดการไฟล์แบบฟอร์มมาตรฐาน `.docx` ในคลังความรู้ AI RAG:
+
+
+```prisma
+model FormTemplate {
+  id           String   @id @default(cuid())
+  fileName     String   // เช่น "from ขอจัดซื้อครุภัณฑ์ (วงเงินไม่เกิน 100,000 บาท).docx"
+  category     String   // วัสดุ, ครุภัณฑ์, จ้างบริการ/จ้างเหมา, จ้างซ่อมทรัพย์สิน, เบิก/คืน/เคลื่อนย้าย
+  budgetMin    Float    @default(0)
+  budgetMax    Float?   // null หมายถึงไม่จำกัดวงเงิน
+  filePath     String   // Storage URL หรือ Path
+  placeholders Json     // รายการ Field ตัวแปร เช่น ["requesterName", "department", "reason", "itemDetails", "totalBudget"]
+  createdAt    DateTime @default(now())
+}
+2. ระบบ Auto Form Selection & Docx Generator Service (src/lib/ai/form-router.ts)
+Auto Form Selection Logic: นำบริบทการสนทนา (ประเภทพัสดุ + วงเงิน) ไปจับคู่กับไฟล์แบบฟอร์ม .docx ใน FormTemplate อัตโนมัติ:
+ขอจัดซื้อวัสดุ: แยกกรณี วงเงินไม่เกิน 100,000 บาท vs วงเงินเกิน 100,000 บาท
+ขอจัดซื้อครุภัณฑ์: แยกกรณี วงเงินไม่เกิน 100,000 บาท vs วงเงินเกิน 100,000 บาท
+ขอจ้างงานบริการ/งานเหมาบริการ: แยกกรณี วงเงินไม่เกิน 100,000 บาท vs วงเงินเกิน 100,000 บาท
+กรณีเฉพาะ: ขอจ้างซ่อมทรัพย์สิน, ใบขอเบิกวัสดุ, ใบเบิกครุภัณฑ์, ขอแจ้งเคลื่อนย้ายครุภัณฑ์, ขอส่งคืนพัสดุชำรุด
+Data Auto-Fill & Docx Generation: ใช้ docxtemplater และ pizzip นำข้อมูลที่สกัดจากแชต Pre-fill ลงในแบบฟอร์มเว็บ และสร้างไฟล์ .docx ที่เติมข้อมูลครบถ้วนให้ผู้ใช้ดาวน์โหลด
+3. ปรับปรุงหน้าปรึกษาจัดซื้อจัดจ้าง (src/app/(dashboard)/consult/page.tsx)
+เป้าหมาย: ลดภาระเจ้าหน้าที่ 3 คน แก้ปัญหาผู้ขอซื้อไม่รู้กระบวนการ และเลือกแบบฟอร์มให้อัตโนมัติ
+Interactive Guidance Chat: สนทนาภาษาเข้าใจง่ายโดยไม่ใช้ศัพท์พัสดุซับซ้อน สกัดข้อมูล วัตถุประสงค์, รายการ, วงเงิน, และวันที่ต้องใช้งาน
+Dynamic SLA Lead-Time Calculator: คำนวณระยะเวลากระบวนการจัดซื้อจัดจ้างตามประเภทงานให้อัตโนมัติ เพื่อลดการทักสอบถามเจ้าหน้าที่:
+แบบจำเพาะเจาะจง (วงเงินเล็กน้อย): ~3 วันทำการ
+จ้างเหมาบริการ / จ้างงาน: ~อย่างน้อย 7 วันทำการ
+จัดซื้อครุภัณฑ์: ~อย่างน้อย 1 เดือน
+งานสิ่งก่อสร้าง / ปรับปรุง: ~อย่างน้อย 1-2 เดือน
+หากวันใช้งานจริงน้อยกว่า SLA ระบบจะขึ้น Alert เตือนความเสี่ยงจัดซื้อไม่ทันแผนงาน
+Visual Process Roadmap: แสดง Mini Timeline สรุปขั้นตอนตั้งแต่ต้นจนจบ เพื่อให้ติดตามสถานะได้เองโดยไม่ต้องทักถามเจ้าหน้าที่
+Form Router & Auto-Filler UI:
+เมื่อคุยจบ AI แสดง Card แนะนำแบบฟอร์ม .docx ที่ต้องใช้
+แสดง HeroUI Form พร้อม Pre-fill ข้อมูลจากการแชตให้ทันที
+ปุ่ม "ดาวน์โหลดเอกสาร (.docx)" ที่เติมข้อมูลเรียบร้อย
+ปุ่ม "ส่งคำขอไปยังเจ้าหน้าที่พัสดุ" สร้าง Request ในระบบพร้อมแนบไฟล์
+
+4. ปรับปรุงหน้าตรวจใบเสนอราคา (src/app/(dashboard)/quotation/page.tsx)
+เป้าหมาย: ลดการส่งกลับเอกสารแก้ไขหลายรอบ และช่วยให้ได้ราคาที่ดีที่สุด
+Multi-Vendor Price Comparison Table: อัปโหลดใบเสนอราคาหลายใบ (PDF/JPG) เพื่อเปรียบเทียบในตารางโครงสร้างเดียวกัน (ราคา, ยืนราคา, เงื่อนไขส่งมอบ)
+Completeness Checklist: สแกนตรวจสอบความครบถ้วนของเอกสารผ่าน HeroUI Accordion/Chip:
+[ ] เลขประจำตัวผู้เสียภาษี / ชื่อผู้ขาย
+[ ] กำหนดยืนราคาตามระเบียบ
+[ ] ยอดรวมภาษี VAT 7% และการคำนวณถูกต้อง
+[ ] คุณลักษณะไม่ระบุยี่ห้อเฉพาะเจาะจง
+Pre-Lock-in Detection Alert: AI ตรวจสอบยี่ห้อ/รุ่นในใบเสนอราคา หากเสี่ยงล็อกสเปก ให้แสดง HeroUI Alert เตือนผู้ใช้ทันทีก่อนส่งให้เจ้าหน้าที่
+
+5. ปรับปรุงหน้าช่วยร่าง TOR (src/app/(dashboard)/tor/page.tsx)
+เป้าหมาย: แก้ปัญหาบุคลากรเขียน TOR ไม่เป็น สเปกกำกวม หรือเสี่ยงถูกร้องเรียนเรื่องล็อกสเปก
+Smart TOR Wizard Template: สร้างร่าง TOR อัตโนมัติจากข้อมูลที่ยืนยันแล้ว แบ่งตามประเภทงาน (ครุภัณฑ์ / จ้างเหมา / สิ่งก่อสร้าง / จำเพาะเจาะจง)
+Real-Time Lock-In & Ambiguity Checker:
+Highlight สีแดง: คำที่เสี่ยงล็อกสเปก (ระบุยี่ห้อ/รุ่น หรือสเปกที่มีผู้ขายรายเดียว)
+Highlight สีเหลือง: ข้อความกำกวม เช่น "คุณภาพดีมาก", "มาตรฐานสูง" ที่ไม่มีตัวชี้วัด
+แนะนำคำแก้ไขที่ถูกต้องตามระเบียบพัสดุ
+Version Control & Export: บันทึกประวัติการแก้ไขทุกเวอร์ชัน และ Export เป็น PDF/DOCX รูปแบบมาตรฐานส่งให้เจ้าหน้าที่พัสดุตรวจรับรอง
+=== Session: ตั้งค่า AI automation ผ่าน lib genai.ts (2026-08-29 18:32:53) ===|ต่อ
+=== Session: ตั้งค่า AI automation ผ่าน lib genai.ts (2026-08-29 18:32:53) ===|มีปัญหากับ modal อีกแล้วคลิกแล้วเปิด modal ไม่ได้
+=== Session: ตั้งค่า AI automation ผ่าน lib genai.ts (2026-08-29 18:32:53) ===|คลังแบบฟอร์มเอกสาร  เมื่อคลิกแก้ไขข้อมูล แล้วคลิกบันทึกแบบฟอร์ม เหมือนจะสร้างขั้นอีกรายการหนึ่ง ไม่ได้บันทึกการแก้ไข
+=== Session: เพิ่มหน้าจอบริหารหน่วยงานแบบ parent-child และผู้ใช้ (2026-08-29 21:22:35) ===|เพิ่มหน้าจอสำหรับบริหารจัดการ หน่วยงาน ของคณะสหวิทยาการ มข.​โดยสามารถสร้างได้แบบ parent child และสามารถเพิ่มผู้ใช้เข้าในหน่วยงานนั้น ๆ ได้
+=== Session: แก้ไข 404 sw.js ใน next.js (2026-08-29 23:27:51) ===| GET /sw.js 404 in 31ms (next.js: 9ms, application-code: 22ms)
+
+แก้ไขปัญหานี้หน่อย
+=== Session: แก้ไข 404 sw.js ใน next.js (2026-08-29 23:27:51) ===|ทำไมชื่อระบบบน navbar หายไป นำกลับมา
+=== Session: แก้ไข 404 sw.js ใน next.js (2026-08-29 23:27:51) ===|ติดตั้ง reactflow เพิ่ม เพื่อใช้ทำ workflow ของกระบวนการจัดซื้อจัดจ้างในอนาคต
+=== Session: แก้ไข 404 sw.js ใน next.js (2026-08-29 23:27:51) ===|Invalid `__TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["prisma"].torDraft.create()` invocation in /Users/pjatupon/Project/isprotrack/.next/dev/server/chunks/ssr/_1g4k3q1._.js:162:165 159 } 160 }); 161 const nextVersion = (lastDraft?.version ?? 0) + 1; → 162 const draft = await __TURBOPACK__imported__module__$5b$project$5d2f$src$2f$lib$2f$prisma$2e$ts__$5b$app$2d$rsc$5d$__$28$ecmascript$29$__["prisma"].torDraft.create( Foreign key constraint violated on the fields: (`requestId`)
+
+เมื่อคลิกบันทึกร่าง TOR
+=== Session: Collection rendering error in QuotationPage (2026-08-29 23:54:20) ===|## Error TypeRuntime Error
+
+
+## Error Message
+ cannot be rendered outside a collection.
+
+
+
+
+    at QuotationPage (src/app/(dashboard)/quotation/page.tsx:446:23)
+
+
+## Code Frame
+  444 |                   <Table className="w-full text-left text-xs">
+  445 |                     <Table.Header>
+> 446 |                       <Table.Column className="p-2 font-bold text-stone-600">รายการ</Table.Column>
+      |                       ^
+  447 |                       {doneVendors.map((v) => (
+  448 |                         <Table.Column key={v.id} className="p-2 font-bold text-stone-600">
+  449 |                           <div className="flex items-center gap-1">
+
+
+Next.js version: 16.3.3 (Turbopack)
+
+
+=== Session: Collection rendering error in QuotationPage (2026-08-29 23:54:20) ===|## Error TypeRuntime Error
+
+
+## Error Message
+Element type is invalid: expected a string (for built-in components) or a class/function (for composite components) but got: undefined. You likely forgot to export your component from the file it's defined in, or you might have mixed up default and named imports.
+
+
+Check the render method of `QuotationPage`.
+
+
+
+
+    at QuotationPage (src/app/(dashboard)/quotation/page.tsx:446:23)
+
+
+## Code Frame
+  444 |                   <Table className="w-full text-left text-xs">
+  445 |                     <Table.Header>
+> 446 |                       <Table.ColumnHeader className="p-2 font-bold text-stone-600">รายการ</Table.ColumnHeader>
+      |                       ^
+  447 |                       {doneVendors.map((v) => (
+  448 |                         <Table.ColumnHeader key={v.id} className="p-2 font-bold text-stone-600">
+  449 |                           <div className="flex items-center gap-1">
+
+
+Next.js version: 16.3.3 (Turbopack)
+
+
+=== Session: Collection rendering error in QuotationPage (2026-08-29 23:54:20) ===|OCR AI error: [TypeError: fetch failed] {  [cause]: Error [ConnectTimeoutError]: Connect Timeout Error (attempted address: gen.ai.kku.ac.th:443, timeout: 10000ms)
+      at ignore-listed frames {
+    code: 'UND_ERR_CONNECT_TIMEOUT'
+  }
+}
+ POST /api/ai/ocr 500 in 10.8s
+=== Session: AI เติม placeholder ในแบบฟอร์มพัสดุ docx (2026-08-30 00:05:29) ===|ส่งไฟล์ docx แบบฟอร์มพัสดุ ให้ ai วิเคราะห์แล้วเติม placeholder field ลงไนไฟล์ docx ก็บันทึกไว้บนเชิร์ฟเวอร์ เพื่อให้ผู้ใช้กรอกข้อมูลแล้วเติมข้อมูล และดาวน์โหลดไฟล์นั้นต่อไป
+=== Session: AI เติม placeholder ในแบบฟอร์มพัสดุ docx (2026-08-30 00:05:29) ===|form-analyze AI error: Error: Network error - unable to connect to AI service    at generateText (src/lib/genai.ts:182:15)
+    at async analyzeFormDocx (src/lib/ai/form-analysis.ts:78:20)
+    at async POST (src/app/api/ai/form-analyze/route.ts:36:20)
+  180 |     if (error instanceof Error) {
+  181 |       if (error.message.includes("fetch failed")) {
+> 182 |         throw new Error("Network error - unable to connect to AI service");
+      |               ^
+  183 |       }
+  184 |       throw error;
+  185 |     }
+ POST /api/ai/form-analyze 500 in 12.1s 
+
+ต้องเพิ่มเวลา timeout  ให้มากขึ้นไหม๋
+=== Session: AI เติม placeholder ในแบบฟอร์มพัสดุ docx (2026-08-30 00:05:29) ===|ยังไ่พอ เพิ่มเวลาอีกเท่าตัว
+=== Session: AI เติม placeholder ในแบบฟอร์มพัสดุ docx (2026-08-30 00:05:29) ===|## Error TypeConsole Error
+
+
+## Error Message
+An async function with useActionState was called outside of a transition. This is likely not what you intended (for example, isPending will not update correctly). Either call the returned function inside startTransition, or pass it to an `action` or `formAction` prop.
+
+
+
+
+    at handleSave (src/components/admin/form-templates/ai-form-template-wizard.tsx:136:5)
+    at button (unknown:0:0)
+    at AiFormTemplateWizard (src/components/admin/form-templates/ai-form-template-wizard.tsx:430:17)
+    at FormTemplateManager (src/components/admin/form-templates/form-template-manager.tsx:427:9)
+
+
+## Code Frame
+  134 |     if (isActive) fd.append("isActive", "on");
+  135 |     fd.append("placeholderDefs", JSON.stringify(fields));
+> 136 |     saveAction(fd);
+      |     ^
+  137 |   };
+  138 |
+  139 |   const reset = () => {
+
+
+Next.js version: 16.3.3 (Turbopack)
+
+
+=== Session: AI เติม placeholder ในแบบฟอร์มพัสดุ docx (2026-08-30 00:05:29) ===|## Error TypeConsole Error
+
+
+## Error Message
+An async function with useActionState was called outside of a transition. This is likely not what you intended (for example, isPending will not update correctly). Either call the returned function inside startTransition, or pass it to an `action` or `formAction` prop.
+
+
+
+
+    at form (unknown:0:0)
+
+
+Next.js version: 16.3.3 (Turbopack)
+
+
+=== Session: Embedding error 404 เกิดจากรุ่น Gemini หรือไม่ (2026-08-30 01:17:38) ===|AI embedding error: 404 { message: 'Cannot POST:/embeddings' } เพราะใช้ model gemini-3.7-flash นี้ไหม๋
+=== Session: Embedding error 404 เกิดจากรุ่น Gemini หรือไม่ (2026-08-30 01:17:38) ===|ตรวจสอบแก้ไขให้หน่อยครับ
+
+คู่มือระบุมา
+curl https://gen.ai.kku.ac.th/api/v1/chat/completions \  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {API_KEY}" \
+  -d '{
+        "model": "gemini-2.5-flash-lite",
+        "messages": [
+          {"role": "system", "content": "You are a helpful assistant."},
+          {"role": "user", "content": "What is the meaning of life?"}
+        ],
+        "stream": false
+      }'
+		
+=== Session: Embedding error 404 เกิดจากรุ่น Gemini หรือไม่ (2026-08-30 01:17:38) ===|แต่ก็ยังใช้ ai เพื่อทำ vision ก่อนไหม๋ แล้วนำข้อความที่ได้จาก ai vision มาทำ local embeding 
+=== Session: Embedding error 404 เกิดจากรุ่น Gemini หรือไม่ (2026-08-30 01:17:38) ===|ใน ตั้งค่าการใช้งาน AI ก็ควรลบฟอร์ม embeding model ออกไหม๋
+=== Session: Embedding error 404 เกิดจากรุ่น Gemini หรือไม่ (2026-08-30 01:17:38) ===|เอาออกให้หน่อย
+=== Session: Embedding error 404 เกิดจากรุ่น Gemini หรือไม่ (2026-08-30 01:17:38) ===|อัปโหลดเอกสารเข้าสู่คลังความรู้ สำเร็จให้แสดง alert และปิด modal ไป
+=== Session: Embedding error 404 เกิดจากรุ่น Gemini หรือไม่ (2026-08-30 01:17:38) ===|อัปโหลดเอกสารเข้าสู่คลังความรู้ สำเร็จให้แสดง heroui v3 toast และปิด modal ไป
+=== Session: Embedding error 404 เกิดจากรุ่น Gemini หรือไม่ (2026-08-30 01:17:38) ===|AI embedding error: 404 { message: 'Cannot POST:/embeddings' }AI gateway ไม่รองรับ endpoint /embeddings จึงใช้ local embedding แทน (local-hash-768)
+
+local embeding ไม่ต้องรอจน fallback ให้เป็นหลักเลย
+=== Session: Embedding error 404 เกิดจากรุ่น Gemini หรือไม่ (2026-08-30 01:17:38) ===|## Error TypeRuntime PrismaClientValidationError
+
+
+## Error Message
+
+
+Invalid `prisma.regulationDocument.findMany()` invocation:
+
+
+{
+  orderBy: {
+    createdAt: "desc"
+  },
+  include: {
+  ~~~~~~~
+    category: {
+      select: {
+        id: true,
+        name: true
+      }
+    },
+    _count: {
+      select: {
+        chunks: true
+      }
+    }
+  },
+  select: {
+  ~~~~~~
+    id: true,
+    title: true,
+    issueNo: true,
+    status: true,
+    documentType: true,
+    originalName: true,
+    fileSize: true,
+    mimeType: true,
+    fileUrl: true,
+    dimensions: true,
+    processingNote: true,
+    extractedText: true,
+    createdAt: true,
+    updatedAt: true,
+    category: {
+      select: {
+        id: true,
+        name: true
+      }
+    },
+    _count: {
+      select: {
+        chunks: true
+      }
+    }
+  }
+}
+
+
+Please either use `include` or `select`, but not both at the same time.
+
+
+Next.js version: 16.3.3 (Turbopack)
+
+
+=== Session: การเข้าถึงเอกสารคลังความรู้ AI สำหรับผู้ดูแล (2026-08-30 01:30:29) ===|รายการเอกสารภายใน คลังความรู้ AI ถ้าอยากคลิกดูเนื้อหาภายใน ที่เป็นความรู้ให้ ai ว่าจะมีเนื้อหาอย่างไร 
+อยากให้แอดมินคลิกดูได้
+=== Session: การเข้าถึงเอกสารคลังความรู้ AI สำหรับผู้ดูแล (2026-08-30 01:30:29) ===|ทำตามแผนนั้นเลยครับ
+=== Session: Explore project structure (@explore subagent) (2026-08-30 01:30:36) ===|Explore the codebase at /Users/pjatupon/Project/isprotrack to understand:
+1. The overall project structure (frontend framework, backend, database)
+2. Find any files related to "knowledge", "คลังความรู้", "AI", or document management
+3. Find the routing/navigation structure
+4. Find API endpoints or controllers related to knowledge base
+
+Return a comprehensive summary including:
+- Project tech stack
+- Key directories and their purpose
+- All files related to knowledge base functionality
+- Current routing structure for admin pages
+- Database models related to knowledge/documents
+=== Session: Fix undefined uploadAction in knowledge manager (2026-08-30 01:32:05) ===| GET /admin/knowledge-base 500 in 157ms (next.js: 10ms, proxy.ts: 8ms, application-code: 139ms)⨯ ReferenceError: uploadAction is not defined
+    at KnowledgeManager (src/components/admin/knowledge/knowledge-manager.tsx:527:27)
+  525 |               </Modal.Heading>
+  526 |             </Modal.Header>
+> 527 |             <form action={uploadAction}>
+      |                           ^
+  528 |               <Modal.Body>
+  529 |                 <div className="space-y-4">
+  530 |                   <div className="space-y-1"> {
+  digest: '2049066851'
+}
+ GET /admin/knowledge-base 500 in 108ms (next.js: 3ms, proxy.ts: 6ms, application-code: 98ms)
+⨯ ReferenceError: isUploadPending is not defined
+    at KnowledgeManager (src/components/admin/knowledge/knowledge-manager.tsx:647:31)
+  645 |                 <Button
+  646 |                   type="submit"
+> 647 |                   isDisabled={isUploadPending}
+      |                               ^
+  648 |                   className="bg-[#8B0000] font-semibold text-white hover:bg-[#6e0000] text-xs"
+  649 |                 >
+  650 |                   {isUploadPending ? ( {
+  digest: '2795766337'
+}
+ GET /admin/knowledge-base 500 in 122ms
+=== Session: แก้ไข .env เปลี่ยน URL สำหรับทีม (2026-08-30 09:46:45) ===|แก้ไข .env เปลี่ยนจาก http://localhost:3000 เป็น http://10.153.53.243:3000 เพื่อให้คนในทีมดูหน้าระบบได้
+=== Session: แก้ไข .env เปลี่ยน URL สำหรับทีม (2026-08-30 09:46:45) ===|// next.config.jsmodule.exports = {
+  allowedDevOrigins: ['10.153.53.243'],
+}
+=== Session: แก้ไข .env เปลี่ยน URL สำหรับทีม (2026-08-30 09:46:45) ===|เพิ่มความกว้างของ modal เนื้อหาที่ AI ใช้ค้นหา (RAG)
+=== Session: AI วิเคราะห์แทนที่แบบฟอร์มงานพัสดุ (2026-08-30 09:53:22) ===|ในการแก้ไขแบบฟอร์มเอกสาร อยากให้เพิ่มการแก้ไขไฟล์ ด้วย ai analysis ได้เพราะตอนนี้ในฐานข้อมูลมีรายการเอกสารครบแล้ว แต่อยากแทนที่ด้วยแบบฟอร์มจากงานพัสดุ
+=== Session: AI วิเคราะห์แทนที่แบบฟอร์มงานพัสดุ (2026-08-30 09:53:22) ===|เมื่อคลิกแทนที่ไฟล์และบันทึกแบบฟอร์ม เรียบร้อยแล้ว ก็ให้ปิด modal แล้วแสดง toast แจ้งเตือน
+=== Session: AI วิเคราะห์แทนที่แบบฟอร์มงานพัสดุ (2026-08-30 09:53:22) ===|หลังบันทึกแก้ไขและแทนที่แล้ว กลายเพิ่มอีกรายการหนึ่ง ไม่ใช่การแทนที่รายการเดิม
+=== Session: AI Procurement: ตั้งค่า Prompt และใช้ฐานความรู้ (2026-08-30 10:40:36) ===|สำหรับส่วนฟังก์ชั่นของ AI PROCUREMENT(ปรึกษาความต้องการจัดซื้อจัดจ้าง, ตรวจและวิเคราะห์ใบเสนอราคา, ระบบช่วยร่างข้อกำหนดพัสดุ (TOR)) อยากจะปรับให้ใช้ ai เพื่อช่วยให้ผู้ใช้เข้าใจกระบวนการ workflow จัดซื้อจัดจ้างทางพัสดุ และเป็นเครื่องมือที่ปรึกษาพัสดุ  AI โดยที่สามารถใช้ความรู้ของ model ai เองช่วย แต่ก็ยังไม่เลยขอบเขตความรู้ จากคลังความรู้ภายในระบบนี้เองทั้งเอกสารระเบียบต่าง ๆ ที่เป็น vector ในฐานข้อมูล mysql เพื่อใช้อ้างอิง หรือเป็นไปตามระเบียบต่าง ๆ ที่มีในฐานข้อมูล แล้วถ้าไม่มีในฐานข้อมูลค่อยใช้องค์ความรู้ระเบียบพัสดุของกระทรวงการคลังต่อไป 
+
+และอยากให้แอดมินสามารถ ตั้งค่า prompt ได้เองหรือปรับแต่ง prompt ต่าง ๆ ได้โดยไม่ฮาร์ดโค้ด prompt ในระบบแอดมินแก้ไขได้
+=== Session: AI Procurement: ตั้งค่า Prompt และใช้ฐานความรู้ (2026-08-30 10:40:36) ===|ต่อ
+=== Session: AI Procurement: ตั้งค่า Prompt และใช้ฐานความรู้ (2026-08-30 10:40:36) ===|Console Error
+
+
+
+
+
+In HTML, <div> cannot be a descendant of <p>.
+This will cause a hydration error.
+See more info here: https://nextjs.org/docs/messages/react-hydration-error
+
+
+
+
++
+Client
+-
+Server
+...
+    <SegmentViewNode type="page" pagePath="admin/ai-p...">
+      <SegmentTrieNode>
+      <AiPromptsPage>
+        <div className="mx-auto ma...">
+          <div>
+          <AiPromptsForm prompts={[...]}>
+            <form action={function bound dispatchActionState} className="space-y-5">
+              <div>
+              <div className="grid gap-5...">
+                <PromptEditor>
+                <PromptEditor prompt={{key:"ai.pr...", ...}} isSaving={false} onReset={function onReset}>
+                  <CardRoot className="border bor...">
+                    <bound DOMElement className="card card-..." data-slot="card">
+                      <div className="card card-..." data-slot="card" ref={function}>
+                        <div>
+                        <div className="mt-3">
+                          <textarea>
+                          <PlaceholderHint placeholders={[...]}>
+>                           <p className="mt-1 flex flex-wrap items-center gap-1.5">
+                              <span>
+                              ...
+                                <TooltipTrigger className="inline-flex">
+                                  <bound DOMElement ref={{current:null}} className="tooltip__t..." ...>
+>                                   <div
+>                                     className="tooltip__trigger inline-flex"
+>                                     data-slot="tooltip-trigger"
+>                                     role="button"
+>                                     onFocus={function}
+>                                     onBlur={function}
+>                                     onKeyDown={function onPressStart}
+>                                     onKeyUp={undefined}
+>                                     tabIndex={0}
+>                                     aria-describedby={undefined}
+>                                     onPointerEnter={function}
+>                                     onPointerLeave={function}
+>                                     onPointerDown={function onPressStart}
+>                                     ref={function}
+>                                   >
+                                ...
+                ...
+              ...
+    ...
+src/app/admin/ai-prompts/AiPromptsForm.tsx (38:11) @ <unknown>
+
+
+  36 |       {placeholders.map((ph) => (
+  37 |         <Tooltip.Root key={ph}>
+> 38 |           <Tooltip.Trigger className="inline-flex">
+     |           ^
+  39 |             <code className="rounded bg-stone-100 px-1.5 py-0.5 text-[0.6rem] font-semibold text-[#b95817] cursor-help">
+  40 |      
+
+Console Error
+
+
+
+
+
+
+<p> cannot contain a nested <div>.
+See this log for the ancestor stack trace.
+src/app/admin/ai-prompts/AiPromptsForm.tsx (108:9) @ PromptEditor
+
+
+  106 |           className="w-full rounded-xl border border-stone-200 p-3 font-mono text-[0.7rem] leading-relaxed text-stone-700 focus:border-[#e87722] focus:outline-none disabled:opacity-60"
+  107 |         />
+> 108 |         <PlaceholderHint placeholders={prompt.placeholders} />
+      |         ^
+  109 |       </div>
+  110 |     </Card>
+  111 |   );
+Call Stack
+19
+Show 15 ignore-listed frame(s)
+p
+unknown (0:0)
+PromptEditor
+
+
+=== Session: AI Procurement: ตั้งค่า Prompt และใช้ฐานความรู้ (2026-08-30 10:40:36) ===|สำหรับหน้าปรับแต่ง AI PROMPT ENGINEปรับแต่ง Prompt AI
+
+อยากให้มีปุ่มและเปิด modal เพื่อพิมพ์ความต้องการให้ปรับ prompt แล้วให้ ai ช่วยปรับแต่ง prompt อีกทางเลือกหนึ่ง
+พิมพ์ prompt เพื่อให้ ai ช่วยเขียน prompt
+=== Session: AI Procurement: ตั้งค่า Prompt และใช้ฐานความรู้ (2026-08-30 10:40:36) ===|ปุ่ม ai ช่วยเขียน prompt อยากให้อยู่ตาม card ต่าง ๆ เลย
+=== Session: AI Procurement: ตั้งค่า Prompt และใช้ฐานความรู้ (2026-08-30 10:40:36) ===|SMART PROCUREMENT WIZARDปรึกษาความต้องการจัดซื้อจัดจ้าง
+ระบบ AI วิเคราะห์ความต้องการและค้นหาข้อระเบียบที่เกี่ยวข้องแบบอัตโนมัติ
+
+หน้านี้ อยากให้มีลักษณะเป็น chatbot ด้วยเพื่อให้ผู้ใช้ถามตอบ หรือปรึกษา 
+แล้ว ai ก็จะค้นหา สรุป แนะนำ จากทั้ง คลังความรู้ rag file และความรู้ของ ai model เอง แต่เน้นย้ำให้ถูกต้อง ตรงตามระเบียบพัสดุ
+=== Session: AI Procurement: ตั้งค่า Prompt และใช้ฐานความรู้ (2026-08-30 10:40:36) ===|เพิ่มฟังก์ชั่นบันทึกการสนทนาให้หน่อยครับ admin จะได้รู้ว่าผู้ใช้ถามอะไรบ้าง จะได้นำมาปรับปรุง prompt หรือปรับปรุงการทำงานต่อไป
+และประวัตินี้ก็สามารถกลับมาดำเนินการต่อได้ เช่น เมื่อผู้ใช้เริ่มจะทำขั้นตอนใด ขั้นตอนหนึ่ง แล้วไปหน้าจออื่น หลังจากกลับมาหน้าจอนี้ก็สามารถทำงานต่อไปได้ จะได้ไม่เริ่มต้นใหม่
+=== Session: AI Procurement: ตั้งค่า Prompt และใช้ฐานความรู้ (2026-08-30 10:40:36) ===|ต่อ
+=== Session: AI Procurement: ตั้งค่า Prompt และใช้ฐานความรู้ (2026-08-30 10:40:36) ===|คำถามแนะนำที่สอบถามได้บ่อย: 
+ส่วนนี้คลิกตัวอย่างคำถามแล้ว ส่งให้ ai ตอบให้เลย
+และตอนนี้ยังถามแล้วส่ง ไม่มีคำตอบกลับมา เงียบไปเลย
+=== Session: AI Procurement: ตั้งค่า Prompt และใช้ฐานความรู้ (2026-08-30 10:40:36) ===|ขึ้นข้อความ เกิดข้อผิดพลาด: ไม่สามารถเปิดการสนทนาได้ กรุณารีเฟรชหน้าแล้วลองใหม่อีกครั้ง
+=== Session: AI Procurement: ตั้งค่า Prompt และใช้ฐานความรู้ (2026-08-30 10:40:36) ===|ต่อ
+=== Session: AI Procurement: ตั้งค่า Prompt และใช้ฐานความรู้ (2026-08-30 10:40:36) ===|/consult อยากให้แนบรูปภาพได้ เพื่อให้ผู้ใช้แนบภาพวัสดุ อุปกรณ์ ที่ต้องการจัดซื้อแล้วให้ ai วิเคราะห์และเสนอแนะวิธีการจัดซื้อ และสามารถถามต่อให้ไปร่าง tor กรอกแบบฟอร์มจัดซื้อ ได้
+=== Session: AI Procurement: ตั้งค่า Prompt และใช้ฐานความรู้ (2026-08-30 10:40:36) ===|/consult อยากให้แนบรูปภาพได้ เพื่อให้ผู้ใช้แนบภาพวัสดุ อุปกรณ์ ที่ต้องการจัดซื้อแล้วให้ ai วิเคราะห์และเสนอแนะวิธีการจัดซื้อ และสามารถถามต่อให้ไปร่าง tor กรอกแบบฟอร์มจัดซื้อ ได้
+=== Session: AI Procurement: ตั้งค่า Prompt และใช้ฐานความรู้ (2026-08-30 10:40:36) ===|ต่อ
+=== Session: AI Procurement: ตั้งค่า Prompt และใช้ฐานความรู้ (2026-08-30 10:40:36) ===|ทำต่อ
+=== Session: AI Procurement: ตั้งค่า Prompt และใช้ฐานความรู้ (2026-08-30 10:40:36) ===|การร่าง TOR ก็ใช้ข้อมูลความต้องการของผู้ใช้ นำไปให้ AI ช่วยร่าง TOR ที่ถูกต้องตรงตามระเบียบ ทั้งจากคลังควมมรู้ RAG file 
+=== Session: สลับเมนูระหว่างแบบฟอร์มเอกสารและ TOR generator (2026-08-30 10:43:35) ===|สลับเมนู แบบฟอร์มเอกสารกับ tor generator
+=== Session: สลับเมนูระหว่างแบบฟอร์มเอกสารและ TOR generator (2026-08-30 10:43:35) ===|สลับตำแหน่งเมนู - เปลี่ยนลำดับของเมนู "แบบฟอร์มเอกสาร" และ "TOR Generator" ใน navigation
+=== Session: เพิ่มเมนูกลับหน้าแรกจากหน้าเมนูแอดมิน (2026-08-30 11:01:16) ===|เพิ่มเมนู กลับหน้าแรก (/) จากหน้าเมนูของแอดมิน 
+=== Session: เพิ่มเมนูกลับหน้าแรกจากหน้าเมนูแอดมิน (2026-08-30 11:01:16) ===|เส้นทางคำขอจัดซื้อสถานะปัจจุบันของกระบวนการจัดซื้อจัดจ้าง
+
+ที่หน้าแรกของระบบ อยากปรับให้เป็นรูปแบบ timeline ที่สวยงามา
+=== Session: Sidebar ตกลงจาก navbar เมื่อคลิกแดชบอร์ด (2026-08-30 11:05:36) ===|เมื่อคลิกที่เมนูแดชบอร์ด แล้วส่วน sidebar ตกลงมาหรือห่างจาก navbar
+=== Session: Sidebar ตกลงจาก navbar เมื่อคลิกแดชบอร์ด (2026-08-30 11:05:36) ===|อยากเพิ่มเมนู สำหรับเจ้าหน้าที่ (/admin/) ถ้ามีสิทธิ์เข้าถึง ทั้งบน dropdown ของ navbar และ sidebar
+=== Session: Sidebar ตกลงจาก navbar เมื่อคลิกแดชบอร์ด (2026-08-30 11:05:36) ===|AI PROMPT ENGINEปรับแต่ง Prompt AI
+
+เมื่อเข้าหน้าที่ sidebar ก็หล่น และห่างจาก navbar 
+=== Session: คลังความรู้ AI รองรับการเพิ่มข้อมูลข้อความ Q&A (2026-08-30 11:21:07) ===|KNOWLEDGE BASEคลังความรู้ AI
+
+อาจจะไม่รับข้อมูลจากไฟล์อย่างเดียว 
+แอดมินสามารถเพิ่มข้อมูลที่เป็นข้อความได้ เช่น copy ข้อความถาม/ตอบ มาเพิ่มในคลังความรู้ได้
+=== Session: คลังความรู้ AI รองรับการเพิ่มข้อมูลข้อความ Q&A (2026-08-30 11:21:07) ===|ข้อความความรู้ เป็น text area ใหญ่ ๆ หน่อยครับ เผื่อวางข้อความยาว ๆ เยอะ
+=== Session: คลังความรู้ AI รองรับการเพิ่มข้อมูลข้อความ Q&A (2026-08-30 11:21:07) ===|มี scrollbar ให้หน่อยจะเลือนลงไปหาปุ่มบันทึก
+=== Session: คลังความรู้ AI รองรับการเพิ่มข้อมูลข้อความ Q&A (2026-08-30 11:21:07) ===|ลดความสูงของ text area ลงครึ่งหนึ่ง
+=== Session: ปรับปรุง /quotation เพิ่ม AI และร่าง TOR พัสดุ (2026-08-30 11:47:12) ===|ปรับปรุงหน้าจอ /quotation ให้ทำงานได้สมบูรณ์และเพิ่ม ข้อเสนอแนะจาก ai 
+ถามให้ช่วยร่าง tor และจัดทำแบบฟอร์มทางพัสดุต่อ
+=== Session: ปรับปรุง /quotation เพิ่ม AI และร่าง TOR พัสดุ (2026-08-30 11:47:12) ===|ต่อ
+=== Session: ปรับปรุง /quotation เพิ่ม AI และร่าง TOR พัสดุ (2026-08-30 11:47:12) ===|ต่อ
+=== Session: ปรับปรุง /quotation เพิ่ม AI และร่าง TOR พัสดุ (2026-08-30 11:47:12) ===|Recoverable Error
+
+
+
+
+
+A table must have at least one Column with the isRowHeader prop set to true
+=== Session: สร้างหน้าจอ audit log (2026-08-30 12:02:56) ===|สร้างหน้าจอและฟังกืชั่น audit log ให้หน่อยครับ ตอนนี้คลิกเมนู แล้วยังไม่มีหน้าจอนี้
+=== Session: แนวทางและขั้นตอนการพัฒนาผลงาน AI Hackathon (2026-08-30 12:16:14) ===|4. แนวทางและขั้นตอนการพัฒนาผลงาน (อธิบายแนวทางและขั้นตอนการพัฒนาผลงาน พอสังเขป เช่น เครื่องมือ/โมเดล AI ที่ใช้ และขั้นตอนหลักที่ทำ)
+
+วิเคราะห์โครงการนี้และช่วยเขียนตามหัวข้อนี้ให้หน่อย เพื่อจะได้ส่งแข่งขัน ai hackathon ตามแบบฟอร์มอธิบายรายละเอียดที่มาของผลงาน
+
+ทั้ง text และภาพสถาปัตยกรรม
+=== Session: แนวทางและขั้นตอนการพัฒนาผลงาน AI Hackathon (2026-08-30 12:16:14) ===|เขียนลงใน readme.md ให้หน่อยครับ
+=== Session: แนวทางและขั้นตอนการพัฒนาผลงาน AI Hackathon (2026-08-30 12:16:14) ===|เพิ่มเติมข้อมูล ใน readme
+- คุณลักษณะของระบบ
+- ประเด็นปัญหา ทำไมถึงพัฒนาระบบนี้ (Paint Point)
+- ประโยขน์ที่ได้รับ
+- แนวทางการพัฒนาต่อ
+=== Session: New session - 2026-08-30T05:27:50.915Z (2026-08-30 12:27:50) ===|ลบส่วนเมนู TRACKING & OPS
+และเมนู regulation hub
+=== Session: New session - 2026-08-30T05:27:50.915Z (2026-08-30 12:27:50) ===|ลบส่วนเมนู TRACKING & OPSและเมนู regulation hub
+=== Session: New session - 2026-08-30T05:28:13.977Z (2026-08-30 12:28:13) ===|An async function with useActionState was called outside of a transition. This is likely not what you intended (for example, isPending will not update correctly). Either call the returned function inside startTransition, or pass it to an `action` or `formAction` prop.src/app/(dashboard)/tor/page.tsx (238:5) @ handleExport
+
+
+  236 |     fd.append("deliverables", torData.deliverables);
+  237 |     fd.append("inspectionCriteria", torData.inspectionCriteria);
+> 238 |     exportAction(fd);
+      |     ^
+  239 |   };
+  240 |
+  241 |   const loadVersion = (v: TorVersionView) => {
+Call Stack
+19
+Show 16 ignore-listed frame(s)
+handleExport
+src/app/(dashboard)/tor/page.tsx (238:5)
+button
+unknown (0:0)
+TorPage
+
+
+=== Session: New session - 2026-08-30T05:28:13.977Z (2026-08-30 12:28:13) ===|แก้ไข bug error เมื่อกิ
+=== Session: ลดข้อความสำหรับพื้นที่ทำงาน (2026-08-30 12:37:07) ===|ลดข้อความ หรือเขียนให้กระขับขึ้นเพื่อ ลดพื้นที่อธิบาย จะได้มีพื้นที่ทำงานมากขึ้น
+
+ข้อความด้านล่างนี้
+สวัสดีครับ ยินดีต้อนรับสู่ระบบปรึกษาการจัดซื้อจัดจ้างอัจฉริยะ คณะสหวิทยาการ มหาวิทยาลัยขอนแก่น
+
+ผมคือที่ปรึกษาพัสดุ AI จะค้นหาข้อระเบียบจากคลังความรู้ในระบบและความรู้ระเบียบของกระทรวงการคลังเพื่อให้คำแนะนำที่ถูกต้อง ตรงตามระเบียบพัสดุ
+
+
+คุณสามารถ **พิมพ์คำถาม** ที่อยากปรึกษาได้เลย หรือใช้ตัวช่วยด้านล่าง และถ้าต้องการคำแนะนำแบบเป็นขั้นตอน กดปุ่ม **เริ่ม Wizard ตามขั้นตอน** ทางด้านขวาได้ครับ
+=== Session: ลดข้อความสำหรับพื้นที่ทำงาน (2026-08-30 12:37:07) ===|ดำเนินการตามนี้เลยครับ
+=== Session: ลดข้อความสำหรับพื้นที่ทำงาน (2026-08-30 12:37:07) ===|คำถามแนะนำที่สอบถามได้บ่อย: 
+ส่วนนี้ย้ายลงมาไว้ด้านล่าง ช่องถาม ai
+=== Session: ลดข้อความสำหรับพื้นที่ทำงาน (2026-08-30 12:37:07) ===|เมื่อเริ่ม ถาม ai อยากให้นำ greeting message ออก
+=== Session: ISKKU project form for approval (2026-08-30 13:08:36) ===|ENOENT: no such file or directory, open '/Users/pjatupon/Project/isprotrack/public/media/templates/templates/1a545d9e-bc18-4f5f-b2be-1cd69edd28b7.docx'
+
+ตอนดาวน์โหลเอกสาร
+=== Session: Export prompts จากเริ่มโปรเจค (2026-08-30 13:56:50) ===|สามารถ export prompt ทั้งหมดตั้งแต่เริ่ม โปรเจค นี้ออกมาได้ไหม๋
+=== Session: Export prompts จากเริ่มโปรเจค (2026-08-30 13:56:50) ===|ต้องการ
+=== Session: Export prompts จากเริ่มโปรเจค (2026-08-30 13:56:50) ===|ขอเป็น txt ไฟล์ได้ไหม๋
