@@ -119,7 +119,7 @@ export async function saveFormTemplate(prevState: unknown, formData: FormData) {
       }
       await fs.mkdir(FORM_TEMPLATE_ROOT, { recursive: true });
       await fs.writeFile(target, buffer);
-      filePath = `templates/${storedName}`;
+      filePath = storedName;
     }
 
     if (id) {
@@ -224,7 +224,7 @@ export async function saveAiFormTemplate(prevState: unknown, formData: FormData)
     await fs.mkdir(FORM_TEMPLATE_ROOT, { recursive: true });
     await fs.writeFile(target, filledBuffer);
 
-    const filePath = `templates/${storedName}`;
+    const filePath = storedName;
 
     if (id) {
       const current = await prisma.formTemplate.findUnique({ where: { id } });
