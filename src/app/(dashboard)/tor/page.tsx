@@ -11,6 +11,7 @@ import {
   Chip,
   Select,
   Badge,
+  Toast,
 } from "@heroui/react";
 import {
   FiFileText,
@@ -28,7 +29,7 @@ import {
 import { ListBox, ListBoxItem } from "react-aria-components";
 import { saveTorDraft } from "@/app/actions/procurement";
 import { analyzeTorSpec, highlightTorText } from "@/lib/ai/tor-analysis";
-import { exportTorDocx, loadTorVersions, type TorVersionView } from "./actions";
+import { loadTorVersions, type TorVersionView } from "./actions";
 import { consumeTorPrefill } from "@/lib/ai/consult-handoff";
 
 type Citation = {
@@ -109,7 +110,6 @@ const WIZARD_SECTIONS: Record<WizardKind, { objective: string; scope: string; de
 };
 
 type SaveState = { success?: boolean; message?: string; error?: string } | null;
-type ExportState = { success?: boolean; error?: string; fileName?: string; base64?: string } | null;
 
 export default function TorPage() {
   const [torData, setTorData] = useState<TorData>({
@@ -125,14 +125,14 @@ export default function TorPage() {
   const [wizardKind, setWizardKind] = useState<WizardKind>("ครุภัณฑ์");
   const [versions, setVersions] = useState<TorVersionView[]>([]);
   const [state, formAction, isPending] = useActionState<SaveState, FormData>(saveTorDraft, null);
-  const [exportState, exportAction, isExporting] = useActionState<ExportState, FormData>(exportTorDocx, null);
   const [isLoadingVersions, startLoad] = useTransition();
   const [aiDraft, setAiDraft] = useState<AiDraftResult>(null);
   const [aiReview, setAiReview] = useState<AiReviewResult>(null);
   const [aiError, setAiError] = useState<string | null>(null);
   const [isDrafting, startDraft] = useTransition();
   const [isReviewing, startReview] = useTransition();
-  const [isExportingTransition, startExport] = useTransition();
+  const [isExporting, startExport] = useTransition();
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const [consultPrefill, setConsultPrefill] = useState<{
     quantity: string;
@@ -145,15 +145,6 @@ export default function TorPage() {
 
   const analysis = useMemo(() => analyzeTorSpec(torData.specifications), [torData.specifications]);
   const isLockInRisk = analysis.lockInIssues.length > 0;
-
-  useEffect(() => {
-    if (exportState?.success && exportState.base64 && exportState.fileName) {
-      const link = document.createElement("a");
-      link.href = `data:application/vnd.openxmlformats-officedocument.wordprocessingml.document;base64,${exportState.base64}`;
-      link.download = exportState.fileName;
-      link.click();
-    }
-  }, [exportState]);
 
   useEffect(() => {
     if (torData.requestId.trim()) {
@@ -228,16 +219,58 @@ export default function TorPage() {
   const highlightParts = highlightTorText(torData.specifications, analysis);
   const totalIssues = analysis.lockInIssues.length + analysis.ambiguityIssues.length;
 
-  const handleExport = () => {
-    const fd = new FormData();
-    fd.append("title", torData.projectTitle || "ร่างข้อกำหนดและขอบเขตงาน (TOR)");
-    fd.append("objective", torData.objective);
-    fd.append("scope", torData.scope);
-    fd.append("specifications", torData.specifications);
-    fd.append("deliverables", torData.deliverables);
-    fd.append("inspectionCriteria", torData.inspectionCriteria);
-    startExport(() => {
-      exportAction(fd);
+  const handleExport = async () => {
+    const fallback = aiDraft?.sections;
+    const objective = torData.objective.trim() || fallback?.objective?.trim() || "";
+    const scope = torData.scope.trim() || fallback?.scope?.trim() || "";
+    const specifications = torData.specifications.trim() || fallback?.specifications?.trim() || "";
+    const deliverables = torData.deliverables.trim() || fallback?.deliverables?.trim() || "";
+    const inspectionCriteria = torData.inspectionCriteria.trim() || fallback?.inspectionCriteria?.trim() || "";
+
+    if (!objective || !scope || !specifications) {
+      setExportError("ยังไม่มีเนื้อหา TOR ให้ส่งออก — กรุณากรอกฟอร์มหรือให้ AI ร่าง TOR ก่อน แล้วกด \"นำไปใส่ในฟอร์ม\"");
+      Toast.toast.danger("ยังไม่มีเนื้อหา TOR ให้ส่งออก กรุณากรอกฟอร์มหรือให้ AI ร่างก่อน");
+      return;
+    }
+    setExportError(null);
+    startExport(async () => {
+      try {
+        const res = await fetch("/api/tor/export", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            title: torData.projectTitle || "ร่างข้อกำหนดและขอบเขตงาน (TOR)",
+            objective,
+            scope,
+            specifications,
+            deliverables,
+            inspectionCriteria,
+          }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || "ไม่สามารถสร้างไฟล์ .docx ได้");
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        const disposition = res.headers.get("Content-Disposition") || "";
+        const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i);
+        const fileName = utf8Match?.[1]
+          ? decodeURIComponent(utf8Match[1])
+          : "ร่างข้อกำหนดและขอบเขตงาน (TOR).docx";
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+        Toast.toast.success(`สร้างไฟล์ ${fileName} เรียบร้อยแล้ว`);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "เกิดข้อผิดพลาดในการสร้างไฟล์ .docx";
+        setExportError(message);
+        Toast.toast.danger(message);
+      }
     });
   };
 
@@ -381,8 +414,7 @@ export default function TorPage() {
           </Button>
           <Button onPress={handleExport} isDisabled={isExporting} className="border border-stone-300 bg-white text-xs font-semibold text-[#272522] hover:bg-stone-50">
             <FiDownload /> {isExporting ? "กำลังสร้าง..." : "ส่งออกเป็น .docx"}
-          </Button>
-        </div>
+          </Button>        </div>
       </div>
 
       {aiError && (
@@ -638,9 +670,9 @@ export default function TorPage() {
         </Alert>
       )}
 
-      {exportState?.error && (
+      {exportError && (
         <Alert status="danger" className="rounded-2xl">
-          <Alert.Description className="text-xs">{exportState.error}</Alert.Description>
+          <Alert.Description className="text-xs">{exportError}</Alert.Description>
         </Alert>
       )}
 
